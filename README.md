@@ -1,73 +1,102 @@
-EXIF.py
-=======
+# EXIF.py
 
-**Version 1.2.0**
+:Version: 1.2.0
 
 Python library to extract EXIF data from tiff and jpeg files.
 
 Originally written by Gene Cash / Thierry Bousch.
 
-##Command line Usage
-```
-$ ./EXIF.py image.jpg
-```
+## Installation
 
-Show command line options
-```
-$ ./EXIF.py
-```
+From the source code directory, run:
 
-##Python Script Usage
+    $ setup.py install
+
+Or, to install directly from git:
+
+    $ pip install git+git://github.com/rshk/exif-py.git
+
+
+## Command line Usage
+
+    $ exifpy image.jpg
+
+Show command line options:
+
+    $ exifpy --help
+
+
+## Python Script Usage
+
 ```python
-import EXIF
+import exifpy
 
 # Open image file for reading (binary mode)
 f = open(path_name, 'rb')
 
 # Return Exif tags
-tags = EXIF.process_file(f)
+tags = exifpy.process_file(f)
 ```
 
 Returned tags will be a dictionary mapping names of Exif tags to their
 values in the file named by path_name.
-You can process the tags as you wish. In particular, you can iterate through all the tags with:
+
+You can process the tags as you wish. In particular, you can iterate through
+all the tags with:
+
 ```python
 for tag in tags.keys():
     if tag not in ('JPEGThumbnail', 'TIFFThumbnail', 'Filename', 'EXIF MakerNote'):
         print "Key: %s, value %s" % (tag, tags[tag])
 ```
 
-An if statement is used to avoid printing out a few of the tags that tend to be long or boring.
+An if statement is used to avoid printing out a few of the tags that tend
+to be long or boring.
 
-The tags dictionary will include keys for all of the usual Exif tags, and will also include keys for
-Makernotes used by some cameras, for which we have a good specification.
+The tags dictionary will include keys for all of the usual Exif tags,
+and will also include keys for Makernotes used by some cameras, for which
+we have a good specification.
 
-Note that the dictionary keys are the IFD name followed by the tag name. For example:
+Note that the dictionary keys are the IFD name followed by the tag name.
+For example:
+
 `'EXIF DateTimeOriginal', 'Image Orientation', 'MakerNote FocusMode'`
 
-##Processing Options
+
+## Processing Options
+
 These options can be used both in command line mode and within a script.
 
-####Ignore MakerNote Tags
+#### Ignore MakerNote Tags
+
 Pass the `-q` or `--quick` command line arguments, or as
+
 ```python
 tags = EXIF.process_file(f, details=False)
 ```
-####Stop at Given Tag
+
+
+#### Stop at Given Tag
+
 To stop processing the file after a specified tag is retrieved.
 
 Pass the `-t TAG` or `--stop-tag TAG` argument, or as
+
 ```python
 tags = EXIF.process_file(f, stop_tag='TAG')
 ```
+
 where `TAG` is a valid tag name, ex `'DateTimeOriginal'`.
 
 *The two above options are useful to speed up processing of large numbers of files.*
 
-####Strict Processing
+
+#### Strict Processing
+
 Return an error on invalid tags instead of silently ignoring.
 
 Pass the `-s` or `--strict` argument, or as
+
 ```python
 tags = EXIF.process_file(f, strict=True)
 ```
