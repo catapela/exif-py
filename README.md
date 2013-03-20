@@ -1,6 +1,6 @@
 # EXIF.py
 
-:version: 1.2.0
+**Version:** 1.2.0
 
 Python library to extract EXIF data from tiff and jpeg files.
 
