@@ -1,5 +1,12 @@
 ﻿~ EXIF.py Changelog ~
 
+2013-03-20 - Samuele Santi
+* Code put in a package and split in sub-modules
+* Applied some PEP-8
+* Improvement of the run script
+* Now using optparse instead of getopt to parse command line arguments
+* Added setup.py, to allow proper installation / packaging
+
 2013-02-?? - Ianaré Sévi
 Port to Python 3 (DarkRedman)
 Fix endless loop on broken images (Michael Bemmerl)
