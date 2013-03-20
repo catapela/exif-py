@@ -105,7 +105,8 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
             fake_exif = 1
             if base > 2:
                 logger.debug("added to base ")
-                base = base + length + 4 -2
+                #base = base + length + 4 - 2
+                base += length + 2
             else:
                 logger.debug("added to zero ")
                 base = length + 4
@@ -122,29 +123,25 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
         while True:
             logger.debug("Segment base 0x{:X}".format(base))
 
-            data_buf = buffer(data, base)
-            _data_b0t2 = data_buf[:2]
+            b = buffer(data, base)
+            _data_b0t2 = b[:2]
 
             if _data_b0t2 == '\xFF\xE0':
                 ## APP0
                 logger.debug("APP0 at 0x{:X}".format(base))
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code = data[base + 4:base + 8]
-                # _b2 = ord(data_buf[2])
-                # _b3 = ord(data_buf[3])
-                # _code = data_buf[4:8]
+                _b2 = ord(b[2])
+                _b3 = ord(b[3])
                 logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code ".format(_code))
+                logger.debug("Code: {}".format(b[4:8]))
 
             elif _data_b0t2 == '\xFF\xE1':
                 ## APP1
                 logger.debug("APP1 at 0x{:X}".format(base))
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code = data[base + 4:base + 8]
+                _b2 = ord(b[2])
+                _b3 = ord(b[3])
+                _code = b[4:8]
                 logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code ".format(_code))
+                logger.debug("Code: {}".format(_code))
                 if _code == "Exif":
                     logger.debug("Decrement base by 2 to get to pre-segment "
                                  "header (for compatibility with later code)")
@@ -154,20 +151,20 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
             elif _data_b0t2 == '\xFF\xE2':
                 ## APP2
                 logger.debug("APP2 at 0x{:X}".format(base))
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code = data[base + 4:base + 8]
+                _b2 = ord(b[2])
+                _b3 = ord(b[3])
+                _code = b[4:8]
                 logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code ".format(_code))
+                logger.debug("Code: {}".format(_code))
 
             elif _data_b0t2 == '\xFF\xEE':
                 # APP14
                 logger.debug("APP14 (Adobe segment) at 0x{:X}".format(base))
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code = data[base + 4:base + 8]
+                _b2 = ord(b[2])
+                _b3 = ord(b[3])
+                _code = b[4:8]
                 logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code ".format(_code))
+                logger.debug("Code: {}".format(_code))
                 logger.debug("There is useful EXIF-like data here, but we "
                              "have no parser for it.")
 
@@ -175,30 +172,29 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
                 ## APP12
                 logger.debug("FFD8 segment at 0x{:X}".format(base))
                 _b0 = data[base]
-                _b1 = data[base + 1]
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code = data[base + 4:base + 8]
-                _code2 = data[base + 4:base + 10]
+                _b1 = b[1]
+                _b2 = ord(b[2])
+                _b3 = ord(b[3])
+                _code = b[4:8]
+                _code2 = b[4:10]
                 logger.debug("Got {:x} {:x} and {:x} instead"
                              "".format(_b0, _b1, _code2))
                 logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code ".format(_code))
+                logger.debug("Code: {}".format(_code))
 
             elif _data_b0t2 == '\xFF\xEC':
                 ## APP12
                 logger.debug("APP12 XMP (Ducky) or Pictureinfo segment "
                              "at 0x{:X}".format(base))
-                _b0 = data[base]
-                _b1 = data[base + 1]
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code = data[base + 4:base + 8]
-                _code2 = data[base + 4:base + 10]
+                _b0 = ord(b[0])
+                _b1 = ord(b[1])
+                _b2 = ord(b[2])
+                _b3 = ord(b[3])
+                _code = b[4:8]
                 logger.debug("Got {:x} {:x} and {:x} instead"
-                             "".format(_b0, _b1, _code2))
+                             "".format(_b0, _b1, b[4:10]))
                 logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code ".format(_code))
+                logger.debug("Code: {}".format(_code))
                 logger.debug(
                     "There is useful EXIF-like data here (quality, "
                     "comment, copyright), but we have no parser for it.")
@@ -216,24 +212,23 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
                 ## I unwrapped to try and see which exception is raised
                 ## (if any) and why..
 
-                _b0 = data[base]
-                _b1 = data[base + 1]
-                _b2 = ord(data[base + 2])
-                _b3 = ord(data[base + 3])
-                _code2 = data[base + 4:base + 10]
+                _b0 = ord(data[base])
+                _b1 = ord(b[1])
+                _code2 = b[4:10]
                 logger.debug("Got {:x} {:x} and {:x} instead"
                              "".format(_b0, _b1, _code2))
 
             ## Increment the base..
-            _base_increment = (_b2 * 256) + _b3 + 2
+            _base_increment = (ord(b[2]) * 256) + ord(b[3]) + 2
             logger.debug("Increment base by {}".format(_base_increment))
             base += _base_increment
 
         f.seek(base + 12)
 
-        _data_b2 = data[base + 2]
-        _data_b6t10 = data[base + 6:base + 10]
-        _data_b6t11 = data[base + 6:base + 11]
+        b = buffer(data, base)
+        _data_b2 = b[2]
+        _data_b6t10 = b[6:10]
+        _data_b6t11 = b[6:11]
 
         if _data_b2 == '\xFF' and _data_b6t10 == 'Exif':
             ## detected EXIF header
@@ -258,8 +253,8 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
         else:
             # no EXIF information
             logger.debug("No EXIF header found:\n"
-                         "    Expected data[2+base]==0xFF and "
-                         "data[base + 6:base + 10]=='Exif'' (or 'Duck')\n"
+                         "    Expected b[2]==0xFF and "
+                         "b[6:10]=='Exif'' (or 'Duck')\n"
                          "    Got: {:x} and {}".format(_data_b2, _data_b6t11))
             return {}
 
