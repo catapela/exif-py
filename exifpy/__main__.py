@@ -82,9 +82,9 @@ def main():
                 details=detailed,
                 strict=strict)
 
-            if not data:
-                print("  No EXIF information found")
-                continue
+            # if not data:
+            #     print("  No EXIF information found")
+            #     continue
 
             for key, value in sorted(data.iteritems()):
 

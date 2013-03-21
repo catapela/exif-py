@@ -1,11 +1,13 @@
 """
 Misc objects
 """
+from UserDict import DictMixin
 
 import logging
 
 from .constants.tags import *
 from .constants.field_types import FIELD_TYPES
+from exifpy import INTR_TAGS
 from .utils import *
 
 
@@ -67,7 +69,7 @@ class IFD_Tag(object):
         raise NotImplementedError  # todo: write this..
 
 
-class ExifHeader(object):
+class ExifHeader(DictMixin, object):
     """Class that handles an EXIF header"""
 
     def __init__(self, file_obj, endian, offset, fake_exif, strict,
@@ -79,7 +81,89 @@ class ExifHeader(object):
         self.strict = strict
         self.detailed = detailed
         self.debug = debug
-        self.tags = {}
+
+    def __getitem__(self, item):
+        ## todo: generate, if this is a lazy item..
+        return self.tags[item]
+
+    def __setitem__(self, key, value):
+        raise RuntimeError("ExifHeader object is read-only")
+
+    def __delitem__(self, key):
+        raise RuntimeError("ExifHeader object is read-only")
+
+    def keys(self):
+        return self.tags.keys()
+
+    @lazy_property
+    def tags(self):
+        logger.debug('Generating list of tags..')
+        tags = {}
+        ctr = 0
+        thumb_ifd = None
+
+        for i in self.list_IFDs():
+            if ctr == 0:
+                IFD_name = 'Image'
+            elif ctr == 1:
+                IFD_name = 'Thumbnail'
+                thumb_ifd = i
+            else:
+                IFD_name = 'IFD %d' % ctr
+            logger.debug(' IFD %d (%s) at offset %d:' % (ctr, IFD_name, i))
+            self.dump_IFD(tags, i, IFD_name)
+
+            ## EXIF IFD
+            exif_offset = tags.get(IFD_name + ' ExifOffset')
+            if exif_offset:
+                logger.debug(' EXIF SubIFD at offset %d:' % exif_offset.values[0])
+                self.dump_IFD(tags, exif_offset.values[0], 'EXIF')
+                # Interoperability IFD contained in EXIF IFD
+                intr_offset = tags.get('EXIF SubIFD InteroperabilityOffset')
+                if intr_offset:
+                    logger.debug(' EXIF Interoperability SubSubIFD at offset {:d}:'
+                                 ''.format(intr_offset.values[0]))
+                    self.dump_IFD(tags, intr_offset.values[0], 'EXIF Interoperability',
+                                 exif_tags=INTR_TAGS)
+
+            ## GPS IFD
+            gps_offset = tags.get(IFD_name + ' GPSInfo')
+            if gps_offset:
+                logger.debug(' GPS SubIFD at offset %d:' % gps_offset.values[0])
+                self.dump_IFD(tags, gps_offset.values[0], 'GPS', exif_tags=GPS_TAGS)
+            ctr += 1
+
+        ## Extract uncompressed TIFF thumbnail
+        thumb = tags.get('Thumbnail Compression')
+        if thumb_ifd is not None \
+                and thumb \
+                and thumb.printable == 'Uncompressed TIFF':
+            self.extract_TIFF_thumbnail(thumb_ifd)
+
+        ## JPEG thumbnail (thankfully the JPEG data is stored as a unit)
+        thumb_off = tags.get('Thumbnail JPEGInterchangeFormat')
+        if thumb_off:
+            self.file.seek(self.offset + thumb_off.values[0])
+            size = tags['Thumbnail JPEGInterchangeFormatLength'].values[0]
+            tags['JPEGThumbnail'] = self.file.read(size)
+
+        ## Deal with MakerNote contained in EXIF IFD
+        ## (Some apps use MakerNote tags but do not use a format for which we
+        ## have a description, do not process these).
+        if self.detailed and \
+                ('EXIF MakerNote' in tags) and \
+                ('Image Make' in tags):
+            self.decode_maker_note(tags)
+
+        ## Sometimes in a TIFF file, a JPEG thumbnail is hidden in the MakerNote
+        ## since it's not allowed in a uncompressed TIFF IFD
+        if 'JPEGThumbnail' not in tags:
+            thumb_off = tags.get('MakerNote JPEGThumbnail')
+            if thumb_off:
+                self.file.seek(self.offset + thumb_off.values[0])
+                tags['JPEGThumbnail'] = file.read(thumb_off.field_length)
+
+        return tags
 
     def s2n(self, offset, length, signed=0):
         """
@@ -127,24 +211,28 @@ class ExifHeader(object):
 
     def list_IFDs(self):
         """Return list of IFDs in header"""
+        # todo: refactor this..
         i = self.first_IFD()
         while i:
             yield i
             i = self.next_IFD(i)
 
-    def dump_IFD(self, ifd, ifd_name, context=None, relative=0,
+    def dump_IFD(self, tags, ifd, ifd_name, exif_tags=None, relative=0,
                  stop_tag='UNDEF'):
-        """Return list of entries in this IFD"""
-        if context is None:
-            context = EXIF_TAGS
+        """Return list of entries in this IFD"""  # < -- no, it doesn't...
+
+        if exif_tags is None:
+            exif_tags = EXIF_TAGS
+
         entries = self.s2n(ifd, 2)
-        for i in range(entries):
-            # entry is index of start of this IFD in the file
+
+        for i in xrange(entries):
+            ## entry is index of start of this IFD in the file
             entry = ifd + 2 + 12 * i
             tag = self.s2n(entry, 2)
 
-            # get tag name early to avoid errors, help debug
-            tag_entry = context.get(tag)
+            ## get tag name early to avoid errors, help debug
+            tag_entry = exif_tags.get(tag)
             if tag_entry:
                 tag_name = tag_entry[0]
             else:
@@ -251,14 +339,14 @@ class ExifHeader(object):
                                 printable += tag_entry[1].get(i, repr(i))
 
                 _tag_name = '{} {}'.format(ifd_name, tag_name)
-                self.tags[_tag_name] = IFD_Tag(
+                new_tag = IFD_Tag(
                     printable=printable, tag=tag, field_type=field_type,
                     values=values, field_offset=field_offset,
                     field_length=count * typelen)
 
-                logger.debug('Added tag: {}: {!r}'.format(
-                    tag_name,
-                    self.tags[ifd_name + ' ' + tag_name]))
+                logger.debug('Added tag: {}: {!r}'.format(tag_name, new_tag))
+
+                tags[_tag_name] = new_tag
 
             if tag_name == stop_tag:
                 break
@@ -336,7 +424,7 @@ class ExifHeader(object):
 
         self.tags['TIFFThumbnail'] = tiff
 
-    def decode_maker_note(self):
+    def decode_maker_note(self, tags):
         """
         Decode all the camera-specific MakerNote formats
 
@@ -377,27 +465,27 @@ class ExifHeader(object):
         if 'NIKON' in make:
             if note.values[0:7] == [78, 105, 107, 111, 110, 0, 1]:
                 logger.debug("Looks like a type 1 Nikon MakerNote.")
-                self.dump_IFD(note.field_offset + 8, 'MakerNote',
-                              context=MAKERNOTE_NIKON_OLDER_TAGS)
+                self.dump_IFD(tags, note.field_offset + 8, 'MakerNote',
+                              exif_tags=MAKERNOTE_NIKON_OLDER_TAGS)
             elif note.values[0:7] == [78, 105, 107, 111, 110, 0, 2]:
                 logger.debug("Looks like a labeled type 2 Nikon MakerNote")
                 _nv_12t14 = note.values[12:14]
                 if _nv_12t14 != [0, 42] and _nv_12t14 != [42, 0]:
                     raise ValueError("Missing marker tag '42' in MakerNote.")
                     ## Skip the Makernote label and the TIFF header
-                self.dump_IFD(note.field_offset+10+8, 'MakerNote',
-                              context=MAKERNOTE_NIKON_NEWER_TAGS, relative=1)
+                self.dump_IFD(tags, note.field_offset+10+8, 'MakerNote',
+                              exif_tags=MAKERNOTE_NIKON_NEWER_TAGS, relative=1)
             else:
                 # E99x or D1
                 logger.debug("Looks like an unlabeled type 2 Nikon MakerNote")
-                self.dump_IFD(note.field_offset, 'MakerNote',
-                              context=MAKERNOTE_NIKON_NEWER_TAGS)
+                self.dump_IFD(tags, note.field_offset, 'MakerNote',
+                              exif_tags=MAKERNOTE_NIKON_NEWER_TAGS)
             return
 
         ## Olympus
         if make.startswith('OLYMPUS'):
-            self.dump_IFD(note.field_offset+8, 'MakerNote',
-                          context=MAKERNOTE_OLYMPUS_TAGS)
+            self.dump_IFD(tags, note.field_offset+8, 'MakerNote',
+                          exif_tags=MAKERNOTE_OLYMPUS_TAGS)
             # XXX TODO
             #for i in (('MakerNote Tag 0x2020', MAKERNOTE_OLYMPUS_TAG_0x2020),):
             #    self.decode_olympus_tag(self.tags[i[0]].values, i[1])
@@ -405,8 +493,8 @@ class ExifHeader(object):
 
         ## Casio
         if 'CASIO' in make or 'Casio' in make:
-            self.dump_IFD(note.field_offset, 'MakerNote',
-                          context=MAKERNOTE_CASIO_TAGS)
+            self.dump_IFD(tags, note.field_offset, 'MakerNote',
+                          exif_tags=MAKERNOTE_CASIO_TAGS)
             return
 
         ## Fujifilm
@@ -420,7 +508,7 @@ class ExifHeader(object):
             offset = self.offset
             self.offset += note.field_offset
             # process note with bogus values (note is actually at offset 12)
-            self.dump_IFD(12, 'MakerNote', context=MAKERNOTE_FUJIFILM_TAGS)
+            self.dump_IFD(tags, 12, 'MakerNote', exif_tags=MAKERNOTE_FUJIFILM_TAGS)
             # reset to correct values
             self.endian = endian
             self.offset = offset
@@ -428,8 +516,8 @@ class ExifHeader(object):
 
         ## Canon
         if make == 'Canon':
-            self.dump_IFD(note.field_offset, 'MakerNote',
-                          context=MAKERNOTE_CANON_TAGS)
+            self.dump_IFD(tags, note.field_offset, 'MakerNote',
+                          exif_tags=MAKERNOTE_CANON_TAGS)
             for i in (('MakerNote Tag 0x0001', MAKERNOTE_CANON_TAG_0x001),
                       ('MakerNote Tag 0x0004', MAKERNOTE_CANON_TAG_0x004)):
                 if i[0] in self.tags:
