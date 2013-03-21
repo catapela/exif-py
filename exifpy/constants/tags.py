@@ -10,10 +10,12 @@ __all__ = ['EXIF_TAGS', 'IGNORE_TAGS', 'MAKERNOTE_NIKON_OLDER_TAGS',
            'MAKERNOTE_CANON_TAGS', 'MAKERNOTE_CANON_TAG_0x001',
            'MAKERNOTE_CANON_TAG_0x004', 'GPS_TAGS']
 
+TAGS_LIBRARY = {}
+
 # dictionary of main EXIF tag names
 # first element of tuple is tag name, optional second element is
 # another dictionary giving names to values
-EXIF_TAGS = {
+TAGS_LIBRARY['exif'] = EXIF_TAGS = {
     0x0100: ('ImageWidth', ),
     0x0101: ('ImageLength', ),
     0x0102: ('BitsPerSample', ),
@@ -281,8 +283,16 @@ EXIF_TAGS = {
     0xEA1C: ('Padding', ),
 }
 
+# Description of endian formats
+ENDIAN_FORMATS = {
+    'I': 'Intel',
+    'M': 'Motorola',
+    '\x01': 'Adobe Ducky',
+    'd': 'XMP/Adobe unknown',
+}
+
 # interoperability tags
-INTR_TAGS = {
+TAGS_LIBRARY['intr'] = INTR_TAGS = {
     0x0001: ('InteroperabilityIndex', ),
     0x0002: ('InteroperabilityVersion', ),
     0x1000: ('RelatedImageFileFormat', ),
@@ -291,7 +301,7 @@ INTR_TAGS = {
 }
 
 # GPS tags (not used yet, haven't seen camera with GPS)
-GPS_TAGS = {
+TAGS_LIBRARY['gps'] = GPS_TAGS = {
     0x0000: ('GPSVersionID', ),
     0x0001: ('GPSLatitudeRef', ),
     0x0002: ('GPSLatitude', ),
@@ -382,7 +392,7 @@ def nikon_ev_bias(seq):
     return ret_str
 
 # Nikon E99x MakerNote Tags
-MAKERNOTE_NIKON_NEWER_TAGS = {
+TAGS_LIBRARY['makernote_nikon_newer'] = MAKERNOTE_NIKON_NEWER_TAGS = {
     0x0001: ('MakernoteVersion', make_string),  # Sometimes binary
     0x0002: ('ISOSetting', make_string),
     0x0003: ('ColorMode', ),
@@ -529,7 +539,7 @@ MAKERNOTE_NIKON_NEWER_TAGS = {
     0x0010: ('DataDump', ),
 }
 
-MAKERNOTE_NIKON_OLDER_TAGS = {
+TAGS_LIBRARY['makernote_nikon_older'] = MAKERNOTE_NIKON_OLDER_TAGS = {
     0x0003: ('Quality',
              {1: 'VGA Basic',
               2: 'VGA Normal',
@@ -580,7 +590,7 @@ def olympus_special_mode(v):
     return '%s - sequence %d - %s' % (a[v[0]], v[1], b[v[2]])
 
 
-MAKERNOTE_OLYMPUS_TAGS = {
+TAGS_LIBRARY['akernote_olympus'] = MAKERNOTE_OLYMPUS_TAGS = {
     ## ah HAH! those sneeeeeaky bastids! this is how they get past the fact
     ## that a JPEG thumbnail is not allowed in an uncompressed TIFF file
 
@@ -669,7 +679,7 @@ MAKERNOTE_OLYMPUS_TAGS = {
 }
 
 # 0x2020 CameraSettings
-MAKERNOTE_OLYMPUS_TAG_0x2020 = {
+TAGS_LIBRARY['makernote_olympus_0x2020'] = MAKERNOTE_OLYMPUS_TAG_0x2020 = {
     0x0100: ('PreviewImageValid',
              {0: 'No',
               1: 'Yes'}),
@@ -820,7 +830,7 @@ MAKERNOTE_OLYMPUS_TAG_0x2020 = {
     0x0901: ('ManometerReading', ),
 }
 
-MAKERNOTE_CASIO_TAGS = {
+TAGS_LIBRARY['makernote_casio'] = MAKERNOTE_CASIO_TAGS = {
     0x0001: ('RecordingMode',
              {1: 'Single Shutter',
               2: 'Panorama',
@@ -874,7 +884,7 @@ MAKERNOTE_CASIO_TAGS = {
               250: '+2.0'}),
 }
 
-MAKERNOTE_FUJIFILM_TAGS = {
+TAGS_LIBRARY['makernote_fujifilm'] = MAKERNOTE_FUJIFILM_TAGS = {
     0x0000: ('NoteVersion', make_string),
     0x1000: ('Quality', ),
     0x1001: ('Sharpness',
@@ -939,15 +949,15 @@ MAKERNOTE_FUJIFILM_TAGS = {
               1: 'On'}),
 }
 
-MAKERNOTE_CANON_TAGS = {
+TAGS_LIBRARY['makernote_canon'] = MAKERNOTE_CANON_TAGS = {
     0x0006: ('ImageType', ),
     0x0007: ('FirmwareVersion', ),
     0x0008: ('ImageNumber', ),
     0x0009: ('OwnerName', ),
 }
 
-# this is in element offset, name, optional value dictionary format
-MAKERNOTE_CANON_TAG_0x001 = {
+## This is in element offset, name, optional value dictionary format
+TAGS_LIBRARY['makernote_canon_0x001'] = MAKERNOTE_CANON_TAG_0x001 = {
     1: ('Macromode',
         {1: 'Macro',
          2: 'Normal'}),
@@ -1055,34 +1065,34 @@ MAKERNOTE_CANON_TAG_0x001 = {
           1: 'Continuous'}),
 }
 
-MAKERNOTE_CANON_TAG_0x004 = {
-    7: ('WhiteBalance',
-        {0: 'Auto',
-         1: 'Sunny',
-         2: 'Cloudy',
-         3: 'Tungsten',
-         4: 'Fluorescent',
-         5: 'Flash',
-         6: 'Custom'}),
+TAGS_LIBRARY['makernote_canon_0x004'] = MAKERNOTE_CANON_TAG_0x004 = {
+    7: ('WhiteBalance', {
+        0: 'Auto',
+        1: 'Sunny',
+        2: 'Cloudy',
+        3: 'Tungsten',
+        4: 'Fluorescent',
+        5: 'Flash',
+        6: 'Custom'}),
     9: ('SequenceNumber', ),
     14: ('AFPointUsed', ),
-    15: ('FlashBias',
-         {0xFFC0: '-2 EV',
-          0xFFCC: '-1.67 EV',
-          0xFFD0: '-1.50 EV',
-          0xFFD4: '-1.33 EV',
-          0xFFE0: '-1 EV',
-          0xFFEC: '-0.67 EV',
-          0xFFF0: '-0.50 EV',
-          0xFFF4: '-0.33 EV',
-          0x0000: '0 EV',
-          0x000C: '0.33 EV',
-          0x0010: '0.50 EV',
-          0x0014: '0.67 EV',
-          0x0020: '1 EV',
-          0x002C: '1.33 EV',
-          0x0030: '1.50 EV',
-          0x0034: '1.67 EV',
-          0x0040: '2 EV'}),
+    15: ('FlashBias', {
+        0xFFC0: '-2 EV',
+        0xFFCC: '-1.67 EV',
+        0xFFD0: '-1.50 EV',
+        0xFFD4: '-1.33 EV',
+        0xFFE0: '-1 EV',
+        0xFFEC: '-0.67 EV',
+        0xFFF0: '-0.50 EV',
+        0xFFF4: '-0.33 EV',
+        0x0000: '0 EV',
+        0x000C: '0.33 EV',
+        0x0010: '0.50 EV',
+        0x0014: '0.67 EV',
+        0x0020: '1 EV',
+        0x002C: '1.33 EV',
+        0x0030: '1.50 EV',
+        0x0034: '1.67 EV',
+        0x0040: '2 EV'}),
     19: ('SubjectDistance', ),
 }

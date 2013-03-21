@@ -59,7 +59,7 @@ ExifPy Main Module
 
 
 import logging
-from exifpy.constants.tags import EXIF_TAGS, GPS_TAGS, INTR_TAGS
+from exifpy.constants.tags import EXIF_TAGS, GPS_TAGS, INTR_TAGS, ENDIAN_FORMATS
 from exifpy.constants.field_types import FIELD_TYPES
 from exifpy.utils import make_string, bytebuffer
 from exifpy.objects import ExifHeader
@@ -255,101 +255,29 @@ def _get_offset_endian(f):
     raise TypeError("Unrecognised file format")
 
 
-def process_file(file_obj, stop_tag='UNDEF', details=True, strict=False):
+def process_file(file_obj, detailed=True, strict=False):
     """
-    process an image file (expects an open file object)
+    Process an image file (expects an open file object)
     this is the function that has to deal with all the arbitrary nasty bits
     of the EXIF standard.
 
-    :param file_obj:
-    :param stop_tag:
-    :param details:
-    :param strict:
-    :return: A dict containing the extracted EXIF tags.
+    :param file_obj: File object from which to read
+    :param detailed: Whether to add "detailed" tag information.
+        Defaults to True.
+    :param strict: Whether to run in "strict mode", raising
+        more exceptions upon failure
+    :return: An ExifHeader object (dict-like) containing the extracted
+        EXIF tags (or, extracting them on-the-fly).
     """
 
-    ## To replace everything down there....
     offset, endian = _get_offset_endian(file_obj)
 
-    ENDIAN_FORMATS = {
-        'I': 'Intel',
-        'M': 'Motorola',
-        '\x01': 'Adobe Ducky',
-        'd': 'XMP/Adobe unknown',
-    }
+    logger.debug("File endian format is {} ({})"
+                 "".format(endian, ENDIAN_FORMATS.get(endian, 'unknown')))
 
-    logger.debug("Endian format is {} ({})".format(
-        endian, ENDIAN_FORMATS.get(endian, 'unknown')))
-
-    hdr = ExifHeader(file_obj, endian=endian, offset=offset, fake_exif=False,
-                     strict=strict, detailed=details)
-
-    # ifd_list = hdr.list_IFDs()
-    # ctr = 0
-    # thumb_ifd = None
-    #
-    # for i in ifd_list:
-    #     if ctr == 0:
-    #         IFD_name = 'Image'
-    #     elif ctr == 1:
-    #         IFD_name = 'Thumbnail'
-    #         thumb_ifd = i
-    #     else:
-    #         IFD_name = 'IFD %d' % ctr
-    #     logger.debug(' IFD %d (%s) at offset %d:' % (ctr, IFD_name, i))
-    #     hdr.dump_IFD(i, IFD_name, stop_tag=stop_tag)
-    #
-    #     ## EXIF IFD
-    #     exif_offset = hdr.tags.get(IFD_name + ' ExifOffset')
-    #     if exif_offset:
-    #         logger.debug(' EXIF SubIFD at offset %d:' % exif_offset.values[0])
-    #         hdr.dump_IFD(exif_offset.values[0], 'EXIF', stop_tag=stop_tag)
-    #         # Interoperability IFD contained in EXIF IFD
-    #         intr_offset = hdr.tags.get('EXIF SubIFD InteroperabilityOffset')
-    #         if intr_offset:
-    #             logger.debug(' EXIF Interoperability SubSubIFD at offset {:d}:'
-    #                          ''.format(intr_offset.values[0]))
-    #             hdr.dump_IFD(intr_offset.values[0], 'EXIF Interoperability',
-    #                          exif_tags=INTR_TAGS, stop_tag=stop_tag)
-    #
-    #     ## GPS IFD
-    #     gps_offset = hdr.tags.get(IFD_name + ' GPSInfo')
-    #     if gps_offset:
-    #         logger.debug(' GPS SubIFD at offset %d:' % gps_offset.values[0])
-    #         hdr.dump_IFD(gps_offset.values[0], 'GPS', exif_tags=GPS_TAGS,
-    #                      stop_tag=stop_tag)
-    #     ctr += 1
-    #
-    # ## Extract uncompressed TIFF thumbnail
-    # thumb = hdr.tags.get('Thumbnail Compression')
-    # if thumb_ifd is not None \
-    #         and thumb \
-    #         and thumb.printable == 'Uncompressed TIFF':
-    #     hdr.extract_TIFF_thumbnail(thumb_ifd)
-    #
-    # ## JPEG thumbnail (thankfully the JPEG data is stored as a unit)
-    # thumb_off = hdr.tags.get('Thumbnail JPEGInterchangeFormat')
-    # if thumb_off:
-    #     file_obj.seek(offset + thumb_off.values[0])
-    #     size = hdr.tags['Thumbnail JPEGInterchangeFormatLength'].values[0]
-    #     hdr.tags['JPEGThumbnail'] = file_obj.read(size)
-    #
-    # ## Deal with MakerNote contained in EXIF IFD
-    # ## (Some apps use MakerNote tags but do not use a format for which we
-    # ## have a description, do not process these).
-    # if details and \
-    #         ('EXIF MakerNote' in hdr.tags) and \
-    #         ('Image Make' in hdr.tags):
-    #     hdr.decode_maker_note()
-    #
-    # ## Sometimes in a TIFF file, a JPEG thumbnail is hidden in the MakerNote
-    # ## since it's not allowed in a uncompressed TIFF IFD
-    # if 'JPEGThumbnail' not in hdr.tags:
-    #     thumb_off = hdr.tags.get('MakerNote JPEGThumbnail')
-    #     if thumb_off:
-    #         file_obj.seek(offset + thumb_off.values[0])
-    #         hdr.tags['JPEGThumbnail'] = file.read(thumb_off.field_length)
-    #
-    # return hdr.tags
-
-    return hdr
+    return ExifHeader(
+        file_obj,
+        endian=endian,
+        offset=offset,
+        strict=strict,
+        detailed=detailed)

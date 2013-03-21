@@ -16,9 +16,9 @@ def main():
     option_parser.add_option(
         '-q', '--quick', action='store_true', dest='quick', default=False,
         help='Do not process MakerNotes')
-    option_parser.add_option(
-        '-t', '--stop-tag', action='store', dest='stop_tag', metavar='TAG',
-        help='Stop processing when this tag is retrieved')
+    # option_parser.add_option(
+    #     '-t', '--stop-tag', action='store', dest='stop_tag', metavar='TAG',
+    #     help='Stop processing when this tag is retrieved')
     option_parser.add_option(
         '-s', '--strict', action='store_true', dest='strict', default=False,
         help='Run in strict mode (stop on errors)')
@@ -45,7 +45,6 @@ def main():
 
     ## Prepare configuration from options
     detailed = not opts.quick
-    stop_tag = opts.stop_tag or 'UNDEF'
     strict = opts.strict
 
     if opts.color == 'auto':
@@ -78,8 +77,7 @@ def main():
             ## Get the tags from file..
             data = process_file(
                 fileobj,
-                stop_tag=stop_tag,
-                details=detailed,
+                detailed=detailed,
                 strict=strict)
 
             # if not data:

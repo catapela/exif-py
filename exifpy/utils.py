@@ -33,9 +33,7 @@ def make_string_uc(seq):
 
 
 def s2n_motorola(input_string):
-    """
-    Extract multibyte integer in Motorola format (little endian)
-    """
+    """Extract multibyte integer in Motorola format (little endian)"""
     x = 0
     for c in input_string:
         x = (x << 8) | ord(c)
@@ -43,15 +41,13 @@ def s2n_motorola(input_string):
 
 
 def s2n_intel(input_string):
-    """
-    Extract multibyte integer in Intel format (big endian)
-    """
-    x = 0
-    y = 0
+    """Extract multibyte integer in Intel format (big endian)"""
+    number = 0
+    position = 0
     for c in input_string:
-        x |= ord(c) << y
-        y += 8
-    return x
+        number |= ord(c) << position
+        position += 8
+    return number
 
 
 def gcd(a, b):
