@@ -47,7 +47,6 @@ def main():
     detailed = not opts.quick
     stop_tag = opts.stop_tag or 'UNDEF'
     strict = opts.strict
-    debug = opts.debug
 
     if opts.color == 'auto':
         use_colors = sys.stdout.isatty()

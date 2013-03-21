@@ -2,9 +2,14 @@
 Misc objects
 """
 
+import logging
+
 from .constants.tags import *
 from .constants.field_types import FIELD_TYPES
 from .utils import *
+
+
+logger = logging.getLogger('exifpy')
 
 
 class Ratio(object):
@@ -30,8 +35,8 @@ class Ratio(object):
 
 class IFD_Tag(object):
     """For ease of dealing with tags"""
-    def __init__(self, printable, tag, field_type, values, field_offset,
-                 field_length):
+    def __init__(self, printable, tag=None, field_type=0, values=None,
+                 field_offset=None, field_length=None):
         # printable version of data
         self.printable = printable
         # tag ID number
@@ -49,19 +54,12 @@ class IFD_Tag(object):
         return self.printable
 
     def __repr__(self):
-        try:
-            s = '(0x%04X) %s=%s @ %d' % (
-                self.tag,
-                FIELD_TYPES[self.field_type][2],
-                self.printable,
-                self.field_offset)
-        except:  # <---- except what?
-            s = '(%s) %s=%s @ %s' % (
-                str(self.tag),
-                FIELD_TYPES[self.field_type][2],
-                self.printable,
-                str(self.field_offset))
-        return s
+        return "<IFD_Tag {:04x} {!r}={!r} @{:d}>".format(
+            self.tag,
+            FIELD_TYPES[self.field_type][2],
+            self.printable,
+            self.field_offset,
+        )
 
     def to_python(self):
         raise NotImplementedError  # todo: write this..
@@ -158,7 +156,8 @@ class EXIF_header(object):
                     if not self.strict:
                         continue
                     else:
-                        raise ValueError('unknown type %d in tag 0x%04X' % (field_type, tag))
+                        raise ValueError('Unknown type {:d} in tag 0x{:04X}'
+                                         ''.format(field_type, tag))
 
                 typelen = FIELD_TYPES[field_type][0]
                 count = self.s2n(entry + 4, 4)
@@ -180,16 +179,19 @@ class EXIF_header(object):
                         tmp_offset = self.s2n(offset, 4)
                         offset = tmp_offset + ifd - 8
                         if self.fake_exif:
-                            offset = offset + 18
+                            offset += 18
                     else:
                         offset = self.s2n(offset, 4)
 
                 field_offset = offset
                 if field_type == 2:
-                    # special case: null-terminated ASCII string
-                    # XXX investigate
-                    # sometimes gets too big to fit in int value
-                    if count != 0:  # and count < (2**31):  # 2E31 is hardware dependant. --gd
+                    ## special case: null-terminated ASCII string
+                    ## todo: investigate
+                    ## sometimes gets too big to fit in int value
+
+                    if count != 0:
+                        ## Was: and count < (2**31):
+                        ## but 2E31 is hardware dependant. --gd
                         try:
                             self.file.seek(self.offset + offset)
                             values = self.file.read(count)
@@ -202,7 +204,7 @@ class EXIF_header(object):
                     values = []
                     signed = (field_type in [6, 8, 9, 10])
 
-                    # XXX investigate
+                    # todo: investigate
                     # some entries get too big to handle could be malformed
                     # file or problem with self.s2n
                     if count < 1000:
@@ -217,13 +219,11 @@ class EXIF_header(object):
                             offset = offset + typelen
                     # The test above causes problems with tags that are
                     # supposed to have long values!  Fix up one important case.
-                    elif tag_name == 'MakerNote' :
+                    elif tag_name == 'MakerNote':
                         for dummy in range(count):
                             value = self.s2n(offset, typelen, signed)
                             values.append(value)
                             offset = offset + typelen
-                            #else :
-                            #    print "Warning: dropping large tag:", tag, tag_name
 
                 # now 'values' is either a string or an array
                 if count == 1 and field_type != 2:
@@ -246,13 +246,15 @@ class EXIF_header(object):
                                 # use lookup table for this tag
                                 printable += tag_entry[1].get(i, repr(i))
 
-                self.tags[ifd_name + ' ' + tag_name] = IFD_Tag(printable, tag,
-                                                               field_type,
-                                                               values, field_offset,
-                                                               count * typelen)
-                if self.debug:
-                    print(' debug:   %s: %s' % (tag_name,
-                                                repr(self.tags[ifd_name + ' ' + tag_name])))
+                _tag_name = '{} {}'.format(ifd_name, tag_name)
+                self.tags[_tag_name] = IFD_Tag(
+                    printable=printable, tag=tag, field_type=field_type,
+                    values=values, field_offset=field_offset,
+                    field_length=count * typelen)
+
+                logger.debug('Added tag: {}: {!r}'.format(
+                    tag_name,
+                    self.tags[ifd_name + ' ' + tag_name]))
 
             if tag_name == stop_tag:
                 break
@@ -272,13 +274,16 @@ class EXIF_header(object):
         tiff += self.file.read(entries * 12 + 2) + '\x00\x00\x00\x00'
 
         # fix up large value offset pointers into data area
+
+        strip_off = None  # todo: handle this properly!!
+
         for i in range(entries):
             entry = thumb_ifd + 2 + 12 * i
             tag = self.s2n(entry, 2)
-            field_type = self.s2n(entry+2, 2)
+            field_type = self.s2n(entry + 2, 2)
             typelen = FIELD_TYPES[field_type][0]
-            count = self.s2n(entry+4, 4)
-            oldoff = self.s2n(entry+8, 4)
+            count = self.s2n(entry + 4, 4)
+            oldoff = self.s2n(entry + 8, 4)
             # start of the 4-byte pointer area in entry
             ptr = i * 12 + 18
             # remember strip offsets location
@@ -327,24 +332,26 @@ class EXIF_header(object):
 
     def decode_maker_note(self):
         """
-        decode all the camera-specific MakerNote formats
+        Decode all the camera-specific MakerNote formats
 
         Note is the data that comprises this MakerNote.  The MakerNote will
-        likely have pointers in it that point to other parts of the file.  We'll
-        use self.offset as the starting point for most of those pointers, since
-        they are relative to the beginning of the file.
+        likely have pointers in it that point to other parts of the file.
+        We'll use self.offset as the starting point for most of those pointers,
+        since they are relative to the beginning of the file.
 
         If the MakerNote is in a newer format, it may use relative addressing
-        within the MakerNote.  In that case we'll use relative addresses for the
-        pointers.
+        within the MakerNote.  In that case we'll use relative addresses
+        for the pointers.
 
         As an aside: it's not just to be annoying that the manufacturers use
-        relative offsets.  It's so that if the makernote has to be moved by the
-        picture software all of the offsets don't have to be adjusted.  Overall,
-        this is probably the right strategy for makernotes, though the spec is
-        ambiguous.  (The spec does not appear to imagine that makernotes would
-        follow EXIF format internally.  Once they did, it's ambiguous whether
-        the offsets should be from the header at the start of all the EXIF info,
+        relative offsets.  It's so that if the makernote has to be moved by
+        the picture software all of the offsets don't have to be adjusted.
+        Overall, this is probably the right strategy for makernotes, though
+        the spec is ambiguous.
+
+        (The spec does not appear to imagine that makernotes would follow
+        EXIF format internally. Once they did, it's ambiguous whether the
+        offsets should be from the header at the start of all the EXIF info,
         or from the header at the start of the makernote.)
         """
         note = self.tags['EXIF MakerNote']
@@ -365,13 +372,11 @@ class EXIF_header(object):
         # cameras work that way.
         if 'NIKON' in make:
             if note.values[0:7] == [78, 105, 107, 111, 110, 0, 1]:
-                if self.debug:
-                    print("Looks like a type 1 Nikon MakerNote.")
-                self.dump_IFD(note.field_offset+8, 'MakerNote',
+                logger.debug("Looks like a type 1 Nikon MakerNote.")
+                self.dump_IFD(note.field_offset + 8, 'MakerNote',
                               context=MAKERNOTE_NIKON_OLDER_TAGS)
             elif note.values[0:7] == [78, 105, 107, 111, 110, 0, 2]:
-                if self.debug:
-                    print("Looks like a labeled type 2 Nikon MakerNote")
+                logger.debug("Looks like a labeled type 2 Nikon MakerNote")
                 if note.values[12:14] != [0, 42] and note.values[12:14] != [42, 0]:
                     raise ValueError("Missing marker tag '42' in MakerNote.")
                     # skip the Makernote label and the TIFF header
@@ -379,8 +384,7 @@ class EXIF_header(object):
                               context=MAKERNOTE_NIKON_NEWER_TAGS, relative=1)
             else:
                 # E99x or D1
-                if self.debug:
-                    print("Looks like an unlabeled type 2 Nikon MakerNote")
+                logger.debug("Looks like an unlabeled type 2 Nikon MakerNote")
                 self.dump_IFD(note.field_offset, 'MakerNote',
                               context=MAKERNOTE_NIKON_NEWER_TAGS)
             return
@@ -436,8 +440,7 @@ class EXIF_header(object):
     def canon_decode_tag(self, value, context):
         for i in range(1, len(value)):
             x = context.get(i, ('Unknown', ))
-            if self.debug:
-                print(i, x)
+            logger.debug('{!r} {!r}'.format(i, x))
             name = x[0]
             if len(x) > 1:
                 val = x[1].get(value[i], 'Unknown')
@@ -445,5 +448,5 @@ class EXIF_header(object):
                 val = value[i]
                 # it's not a real IFD Tag but we fake one to make everybody
             # happy. this will have a "proprietary" type
-            self.tags['MakerNote ' + name] = IFD_Tag(str(val), None, 0, None,
-                                                     None, None)
+            self.tags['MakerNote ' + name] = \
+                IFD_Tag(printable=str(val), tag=None, field_type=0)

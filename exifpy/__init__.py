@@ -60,7 +60,6 @@ from exifpy.utils import *
 from exifpy.objects import *
 
 logger = logging.getLogger('exifpy')
-logger.debug('Hello')
 
 
 __all__ = ['process_file']
@@ -251,15 +250,21 @@ def _get_offset_endian(f):
     raise TypeError("Unrecognised file format")
 
 
-def process_file(f, stop_tag='UNDEF', details=True, strict=False):
+def process_file(file_obj, stop_tag='UNDEF', details=True, strict=False):
     """
     process an image file (expects an open file object)
     this is the function that has to deal with all the arbitrary nasty bits
-    of the EXIF standard
+    of the EXIF standard.
+
+    :param file_obj:
+    :param stop_tag:
+    :param details:
+    :param strict:
+    :return: A dict containing the extracted EXIF tags.
     """
 
     ## To replace everything down there....
-    offset, endian = _get_offset_endian(f)
+    offset, endian = _get_offset_endian(file_obj)
 
     ENDIAN_FORMATS = {
         'I': 'Intel',
@@ -271,7 +276,7 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False):
     logger.debug("Endian format is {} ({})".format(
         endian, ENDIAN_FORMATS.get(endian, 'unknown')))
 
-    hdr = EXIF_header(f, endian=endian, offset=offset, fake_exif=False,
+    hdr = EXIF_header(file_obj, endian=endian, offset=offset, fake_exif=False,
                       strict=strict, detailed=details)
 
     ifd_list = hdr.list_IFDs()
@@ -320,9 +325,9 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False):
     ## JPEG thumbnail (thankfully the JPEG data is stored as a unit)
     thumb_off = hdr.tags.get('Thumbnail JPEGInterchangeFormat')
     if thumb_off:
-        f.seek(offset + thumb_off.values[0])
+        file_obj.seek(offset + thumb_off.values[0])
         size = hdr.tags['Thumbnail JPEGInterchangeFormatLength'].values[0]
-        hdr.tags['JPEGThumbnail'] = f.read(size)
+        hdr.tags['JPEGThumbnail'] = file_obj.read(size)
 
     ## Deal with MakerNote contained in EXIF IFD
     ## (Some apps use MakerNote tags but do not use a format for which we
@@ -337,7 +342,7 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False):
     if 'JPEGThumbnail' not in hdr.tags:
         thumb_off = hdr.tags.get('MakerNote JPEGThumbnail')
         if thumb_off:
-            f.seek(offset + thumb_off.values[0])
+            file_obj.seek(offset + thumb_off.values[0])
             hdr.tags['JPEGThumbnail'] = file.read(thumb_off.field_length)
 
     return hdr.tags
