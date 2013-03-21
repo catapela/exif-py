@@ -107,6 +107,8 @@ def main():
             finally:
                 fileobj.close()
 
+            print("")
+
         if opts.debug and failures:
             print("\n\nFailures Summary:")
             if use_colors:

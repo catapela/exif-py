@@ -158,7 +158,7 @@ def _get_offset_endian_jpeg(f):
         elif _data_b0t2 == '\xFF\xD8':
             ## APP12
             logger.debug("FFD8 segment at 0x{:X}".format(base))
-            logger.debug("Got {:x} {:x} and {:x} instead"
+            logger.debug("Got {:x} {:x} and {} instead"
                          "".format(b[0], b[1], b[4:10]))
             logger.debug("Length {:x} {:x}".format(b[2], b[3]))
             logger.debug("Code: {}".format(b[4:8]))
@@ -167,7 +167,7 @@ def _get_offset_endian_jpeg(f):
             ## APP12
             logger.debug("APP12 XMP (Ducky) or Pictureinfo segment "
                          "at 0x{:X}".format(base))
-            logger.debug("Got {:x} {:x} and {:x} instead"
+            logger.debug("Got {:x} {:x} and {} instead"
                          "".format(b[0], b[1], b[4:10]))
             logger.debug("Length {:x} {:x}".format(b[2], b[3]))
             logger.debug("Code: {}".format(b[4:8]))
