@@ -13,7 +13,9 @@ logger = logging.getLogger('exifpy')
 
 
 class Ratio(object):
-    def __init__(self, num, den):
+    def __init__(self, num, den=None):
+        if isinstance(num, basestring) and den is None:
+            num, den = map(int, num.split('/'))
         self.num = num
         self.den = den
 
@@ -54,7 +56,7 @@ class IFD_Tag(object):
         return self.printable
 
     def __repr__(self):
-        return "<IFD_Tag {:04x} {!r}={!r} @{:d}>".format(
+        return "<IFD_Tag 0x{:04x} ({}) {!r} at 0x{:04X}>".format(
             self.tag,
             FIELD_TYPES[self.field_type][2],
             self.printable,
@@ -65,7 +67,7 @@ class IFD_Tag(object):
         raise NotImplementedError  # todo: write this..
 
 
-class EXIF_header(object):
+class ExifHeader(object):
     """Class that handles an EXIF header"""
 
     def __init__(self, file_obj, endian, offset, fake_exif, strict,
@@ -130,9 +132,11 @@ class EXIF_header(object):
             yield i
             i = self.next_IFD(i)
 
-    def dump_IFD(self, ifd, ifd_name, context=EXIF_TAGS, relative=0,
+    def dump_IFD(self, ifd, ifd_name, context=None, relative=0,
                  stop_tag='UNDEF'):
         """Return list of entries in this IFD"""
+        if context is None:
+            context = EXIF_TAGS
         entries = self.s2n(ifd, 2)
         for i in range(entries):
             # entry is index of start of this IFD in the file
@@ -259,10 +263,12 @@ class EXIF_header(object):
             if tag_name == stop_tag:
                 break
 
-    # extract uncompressed TIFF thumbnail (like pulling teeth)
-    # we take advantage of the pre-existing layout in the thumbnail IFD as
-    # much as possible
     def extract_TIFF_thumbnail(self, thumb_ifd):
+        """
+        Extract uncompressed TIFF thumbnail (like pulling teeth)
+        We take advantage of the pre-existing layout in the thumbnail IFD as
+        much as possible
+        """
         entries = self.s2n(thumb_ifd, 2)
         # this is header plus offset to IFD ...
         if self.endian == 'M':
@@ -354,22 +360,20 @@ class EXIF_header(object):
         offsets should be from the header at the start of all the EXIF info,
         or from the header at the start of the makernote.)
         """
+
         note = self.tags['EXIF MakerNote']
 
-        # Some apps use MakerNote tags but do not use a format for which we
-        # have a description, so just do a raw dump for these.
-        #if self.tags.has_key('Image Make'):
+        ## Some apps use MakerNote tags but do not use a format for which we
+        ## have a description, so just do a raw dump for these.
         make = self.tags['Image Make'].printable
-        #else:
-        #    make = ''
 
         # model = self.tags['Image Model'].printable # unused
 
-        # Nikon
-        # The maker note usually starts with the word Nikon, followed by the
-        # type of the makernote (1 or 2, as a short).  If the word Nikon is
-        # not at the start of the makernote, it's probably type 2, since some
-        # cameras work that way.
+        ## Nikon
+        ## The maker note usually starts with the word Nikon, followed by the
+        ## type of the makernote (1 or 2, as a short).  If the word Nikon is
+        ## not at the start of the makernote, it's probably type 2, since some
+        ## cameras work that way.
         if 'NIKON' in make:
             if note.values[0:7] == [78, 105, 107, 111, 110, 0, 1]:
                 logger.debug("Looks like a type 1 Nikon MakerNote.")
@@ -377,9 +381,10 @@ class EXIF_header(object):
                               context=MAKERNOTE_NIKON_OLDER_TAGS)
             elif note.values[0:7] == [78, 105, 107, 111, 110, 0, 2]:
                 logger.debug("Looks like a labeled type 2 Nikon MakerNote")
-                if note.values[12:14] != [0, 42] and note.values[12:14] != [42, 0]:
+                _nv_12t14 = note.values[12:14]
+                if _nv_12t14 != [0, 42] and _nv_12t14 != [42, 0]:
                     raise ValueError("Missing marker tag '42' in MakerNote.")
-                    # skip the Makernote label and the TIFF header
+                    ## Skip the Makernote label and the TIFF header
                 self.dump_IFD(note.field_offset+10+8, 'MakerNote',
                               context=MAKERNOTE_NIKON_NEWER_TAGS, relative=1)
             else:
@@ -389,7 +394,7 @@ class EXIF_header(object):
                               context=MAKERNOTE_NIKON_NEWER_TAGS)
             return
 
-        # Olympus
+        ## Olympus
         if make.startswith('OLYMPUS'):
             self.dump_IFD(note.field_offset+8, 'MakerNote',
                           context=MAKERNOTE_OLYMPUS_TAGS)
@@ -398,13 +403,13 @@ class EXIF_header(object):
             #    self.decode_olympus_tag(self.tags[i[0]].values, i[1])
             #return
 
-        # Casio
+        ## Casio
         if 'CASIO' in make or 'Casio' in make:
             self.dump_IFD(note.field_offset, 'MakerNote',
                           context=MAKERNOTE_CASIO_TAGS)
             return
 
-        # Fujifilm
+        ## Fujifilm
         if make == 'FUJIFILM':
             # bug: everything else is "Motorola" endian, but the MakerNote
             # is "Intel" endian
@@ -421,7 +426,7 @@ class EXIF_header(object):
             self.offset = offset
             return
 
-        # Canon
+        ## Canon
         if make == 'Canon':
             self.dump_IFD(note.field_offset, 'MakerNote',
                           context=MAKERNOTE_CANON_TAGS)

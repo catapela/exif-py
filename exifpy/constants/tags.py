@@ -4,6 +4,12 @@ Definition of tags
 
 from exifpy.utils import make_string, make_string_uc
 
+__all__ = ['EXIF_TAGS', 'IGNORE_TAGS', 'MAKERNOTE_NIKON_OLDER_TAGS',
+           'MAKERNOTE_NIKON_NEWER_TAGS', 'MAKERNOTE_OLYMPUS_TAGS',
+           'MAKERNOTE_CASIO_TAGS', 'MAKERNOTE_FUJIFILM_TAGS',
+           'MAKERNOTE_CANON_TAGS', 'MAKERNOTE_CANON_TAG_0x001',
+           'MAKERNOTE_CANON_TAG_0x004', 'GPS_TAGS']
+
 # dictionary of main EXIF tag names
 # first element of tuple is tag name, optional second element is
 # another dictionary giving names to values
@@ -11,37 +17,37 @@ EXIF_TAGS = {
     0x0100: ('ImageWidth', ),
     0x0101: ('ImageLength', ),
     0x0102: ('BitsPerSample', ),
-    0x0103: ('Compression',
-             {1: 'Uncompressed',
-              2: 'CCITT 1D',
-              3: 'T4/Group 3 Fax',
-              4: 'T6/Group 4 Fax',
-              5: 'LZW',
-              6: 'JPEG (old-style)',
-              7: 'JPEG',
-              8: 'Adobe Deflate',
-              9: 'JBIG B&W',
-              10: 'JBIG Color',
-              32766: 'Next',
-              32769: 'Epson ERF Compressed',
-              32771: 'CCIRLEW',
-              32773: 'PackBits',
-              32809: 'Thunderscan',
-              32895: 'IT8CTPAD',
-              32896: 'IT8LW',
-              32897: 'IT8MP',
-              32898: 'IT8BL',
-              32908: 'PixarFilm',
-              32909: 'PixarLog',
-              32946: 'Deflate',
-              32947: 'DCS',
-              34661: 'JBIG',
-              34676: 'SGILog',
-              34677: 'SGILog24',
-              34712: 'JPEG 2000',
-              34713: 'Nikon NEF Compressed',
-              65000: 'Kodak DCR Compressed',
-              65535: 'Pentax PEF Compressed'}),
+    0x0103: ('Compression', {
+        1: 'Uncompressed',
+        2: 'CCITT 1D',
+        3: 'T4/Group 3 Fax',
+        4: 'T6/Group 4 Fax',
+        5: 'LZW',
+        6: 'JPEG (old-style)',
+        7: 'JPEG',
+        8: 'Adobe Deflate',
+        9: 'JBIG B&W',
+        10: 'JBIG Color',
+        32766: 'Next',
+        32769: 'Epson ERF Compressed',
+        32771: 'CCIRLEW',
+        32773: 'PackBits',
+        32809: 'Thunderscan',
+        32895: 'IT8CTPAD',
+        32896: 'IT8LW',
+        32897: 'IT8MP',
+        32898: 'IT8BL',
+        32908: 'PixarFilm',
+        32909: 'PixarLog',
+        32946: 'Deflate',
+        32947: 'DCS',
+        34661: 'JBIG',
+        34676: 'SGILog',
+        34677: 'SGILog24',
+        34712: 'JPEG 2000',
+        34713: 'Nikon NEF Compressed',
+        65000: 'Kodak DCR Compressed',
+        65535: 'Pentax PEF Compressed'}),
     0x0106: ('PhotometricInterpretation', ),
     0x0107: ('Thresholding', ),
     0x010A: ('FillOrder', ),
@@ -50,15 +56,15 @@ EXIF_TAGS = {
     0x010F: ('Make', ),
     0x0110: ('Model', ),
     0x0111: ('StripOffsets', ),
-    0x0112: ('Orientation',
-             {1: 'Horizontal (normal)',
-              2: 'Mirrored horizontal',
-              3: 'Rotated 180',
-              4: 'Mirrored vertical',
-              5: 'Mirrored horizontal then rotated 90 CCW',
-              6: 'Rotated 90 CCW',
-              7: 'Mirrored horizontal then rotated 90 CW',
-              8: 'Rotated 90 CW'}),
+    0x0112: ('Orientation', {
+        1: 'Horizontal (normal)',
+        2: 'Mirrored horizontal',
+        3: 'Rotated 180',
+        4: 'Mirrored vertical',
+        5: 'Mirrored horizontal then rotated 90 CCW',
+        6: 'Rotated 90 CCW',
+        7: 'Mirrored horizontal then rotated 90 CW',
+        8: 'Rotated 90 CW'}),
     0x0115: ('SamplesPerPixel', ),
     0x0116: ('RowsPerStrip', ),
     0x0117: ('StripByteCounts', ),
@@ -66,10 +72,10 @@ EXIF_TAGS = {
     0x011B: ('YResolution', ),
     0x011C: ('PlanarConfiguration', ),
     0x011D: ('PageName', make_string),
-    0x0128: ('ResolutionUnit',
-             {1: 'Not Absolute',
-              2: 'Pixels/Inch',
-              3: 'Pixels/Centimeter'}),
+    0x0128: ('ResolutionUnit', {
+        1: 'Not Absolute',
+        2: 'Pixels/Inch',
+        3: 'Pixels/Centimeter'}),
     0x012D: ('TransferFunction', ),
     0x0131: ('Software', ),
     0x0132: ('DateTime', ),
@@ -82,9 +88,9 @@ EXIF_TAGS = {
     0x0202: ('JPEGInterchangeFormatLength', ),
     0x0211: ('YCbCrCoefficients', ),
     0x0212: ('YCbCrSubSampling', ),
-    0x0213: ('YCbCrPositioning',
-             {1: 'Centered',
-              2: 'Co-sited'}),
+    0x0213: ('YCbCrPositioning', {
+        1: 'Centered',
+        2: 'Co-sited'}),
     0x0214: ('ReferenceBlackWhite', ),
 
     0x4746: ('Rating', ),
@@ -98,16 +104,16 @@ EXIF_TAGS = {
     0x83BB: ('IPTC/NAA', ),
     0x8769: ('ExifOffset', ),
     0x8773: ('InterColorProfile', ),
-    0x8822: ('ExposureProgram',
-             {0: 'Unidentified',
-              1: 'Manual',
-              2: 'Program Normal',
-              3: 'Aperture Priority',
-              4: 'Shutter Priority',
-              5: 'Program Creative',
-              6: 'Program Action',
-              7: 'Portrait Mode',
-              8: 'Landscape Mode'}),
+    0x8822: ('ExposureProgram', {
+        0: 'Unidentified',
+        1: 'Manual',
+        2: 'Program Normal',
+        3: 'Aperture Priority',
+        4: 'Shutter Priority',
+        5: 'Program Creative',
+        6: 'Program Action',
+        7: 'Portrait Mode',
+        8: 'Landscape Mode'}),
     0x8824: ('SpectralSensitivity', ),
     0x8825: ('GPSInfo', ),
     0x8827: ('ISOSpeedRatings', ),
@@ -115,14 +121,14 @@ EXIF_TAGS = {
     0x9000: ('ExifVersion', make_string),
     0x9003: ('DateTimeOriginal', ),
     0x9004: ('DateTimeDigitized', ),
-    0x9101: ('ComponentsConfiguration',
-             {0: '',
-              1: 'Y',
-              2: 'Cb',
-              3: 'Cr',
-              4: 'Red',
-              5: 'Green',
-              6: 'Blue'}),
+    0x9101: ('ComponentsConfiguration', {
+        0: '',
+        1: 'Y',
+        2: 'Cb',
+        3: 'Cr',
+        4: 'Red',
+        5: 'Green',
+        6: 'Blue'}),
     0x9102: ('CompressedBitsPerPixel', ),
     0x9201: ('ShutterSpeedValue', ),
     0x9202: ('ApertureValue', ),
@@ -130,60 +136,64 @@ EXIF_TAGS = {
     0x9204: ('ExposureBiasValue', ),
     0x9205: ('MaxApertureValue', ),
     0x9206: ('SubjectDistance', ),
-    0x9207: ('MeteringMode',
-             {0: 'Unidentified',
-              1: 'Average',
-              2: 'CenterWeightedAverage',
-              3: 'Spot',
-              4: 'MultiSpot',
-              5: 'Pattern',
-              6: 'Partial',
-              255: 'other'}),
-    0x9208: ('LightSource',
-             {0: 'Unknown',
-              1: 'Daylight',
-              2: 'Fluorescent',
-              3: 'Tungsten (incandescent light)',
-              4: 'Flash',
-              9: 'Fine weather',
-              10: 'Cloudy weather',
-              11: 'Shade',
-              12: 'Daylight fluorescent (D 5700 - 7100K)',
-              13: 'Day white fluorescent (N 4600 - 5400K)',
-              14: 'Cool white fluorescent (W 3900 - 4500K)',
-              15: 'White fluorescent (WW 3200 - 3700K)',
-              17: 'Standard light A',
-              18: 'Standard light B',
-              19: 'Standard light C',
-              20: 'D55',
-              21: 'D65',
-              22: 'D75',
-              23: 'D50',
-              24: 'ISO studio tungsten',
-              255: 'other light source', }),
-    0x9209: ('Flash',
-             {0: 'Flash did not fire',
-              1: 'Flash fired',
-              5: 'Strobe return light not detected',
-              7: 'Strobe return light detected',
-              9: 'Flash fired, compulsory flash mode',
-              13: 'Flash fired, compulsory flash mode, return light not detected',
-              15: 'Flash fired, compulsory flash mode, return light detected',
-              16: 'Flash did not fire, compulsory flash mode',
-              24: 'Flash did not fire, auto mode',
-              25: 'Flash fired, auto mode',
-              29: 'Flash fired, auto mode, return light not detected',
-              31: 'Flash fired, auto mode, return light detected',
-              32: 'No flash function',
-              65: 'Flash fired, red-eye reduction mode',
-              69: 'Flash fired, red-eye reduction mode, return light not detected',
-              71: 'Flash fired, red-eye reduction mode, return light detected',
-              73: 'Flash fired, compulsory flash mode, red-eye reduction mode',
-              77: 'Flash fired, compulsory flash mode, red-eye reduction mode, return light not detected',
-              79: 'Flash fired, compulsory flash mode, red-eye reduction mode, return light detected',
-              89: 'Flash fired, auto mode, red-eye reduction mode',
-              93: 'Flash fired, auto mode, return light not detected, red-eye reduction mode',
-              95: 'Flash fired, auto mode, return light detected, red-eye reduction mode'}),
+    0x9207: ('MeteringMode', {
+        0: 'Unidentified',
+        1: 'Average',
+        2: 'CenterWeightedAverage',
+        3: 'Spot',
+        4: 'MultiSpot',
+        5: 'Pattern',
+        6: 'Partial',
+        255: 'other'}),
+    0x9208: ('LightSource', {
+        0: 'Unknown',
+        1: 'Daylight',
+        2: 'Fluorescent',
+        3: 'Tungsten (incandescent light)',
+        4: 'Flash',
+        9: 'Fine weather',
+        10: 'Cloudy weather',
+        11: 'Shade',
+        12: 'Daylight fluorescent (D 5700 - 7100K)',
+        13: 'Day white fluorescent (N 4600 - 5400K)',
+        14: 'Cool white fluorescent (W 3900 - 4500K)',
+        15: 'White fluorescent (WW 3200 - 3700K)',
+        17: 'Standard light A',
+        18: 'Standard light B',
+        19: 'Standard light C',
+        20: 'D55',
+        21: 'D65',
+        22: 'D75',
+        23: 'D50',
+        24: 'ISO studio tungsten',
+        255: 'other light source', }),
+    0x9209: ('Flash', {
+        0: 'Flash did not fire',
+        1: 'Flash fired',
+        5: 'Strobe return light not detected',
+        7: 'Strobe return light detected',
+        9: 'Flash fired, compulsory flash mode',
+        13: 'Flash fired, compulsory flash mode, return light not detected',
+        15: 'Flash fired, compulsory flash mode, return light detected',
+        16: 'Flash did not fire, compulsory flash mode',
+        24: 'Flash did not fire, auto mode',
+        25: 'Flash fired, auto mode',
+        29: 'Flash fired, auto mode, return light not detected',
+        31: 'Flash fired, auto mode, return light detected',
+        32: 'No flash function',
+        65: 'Flash fired, red-eye reduction mode',
+        69: 'Flash fired, red-eye reduction mode, return light not detected',
+        71: 'Flash fired, red-eye reduction mode, return light detected',
+        73: 'Flash fired, compulsory flash mode, red-eye reduction mode',
+        77: 'Flash fired, compulsory flash mode, red-eye reduction mode, '
+            'return light not detected',
+        79: 'Flash fired, compulsory flash mode, red-eye reduction mode, '
+            'return light detected',
+        89: 'Flash fired, auto mode, red-eye reduction mode',
+        93: 'Flash fired, auto mode, return light not detected, red-eye '
+            'reduction mode',
+        95: 'Flash fired, auto mode, return light detected, red-eye '
+            'reduction mode'}),
     0x920A: ('FocalLength', ),
     0x9214: ('SubjectArea', ),
     0x927C: ('MakerNote', ),
@@ -195,75 +205,75 @@ EXIF_TAGS = {
     # used by Windows Explorer
     0x9C9B: ('XPTitle', ),
     0x9C9C: ('XPComment', ),
-    0x9C9D: ('XPAuthor', ), #(ignored by Windows Explorer if Artist exists)
+    0x9C9D: ('XPAuthor', ),  # (ignored by Windows Explorer if Artist exists)
     0x9C9E: ('XPKeywords', ),
     0x9C9F: ('XPSubject', ),
 
     0xA000: ('FlashPixVersion', make_string),
-    0xA001: ('ColorSpace',
-             {1: 'sRGB',
-              2: 'Adobe RGB',
-              65535: 'Uncalibrated'}),
+    0xA001: ('ColorSpace', {
+        1: 'sRGB',
+        2: 'Adobe RGB',
+        65535: 'Uncalibrated'}),
     0xA002: ('ExifImageWidth', ),
     0xA003: ('ExifImageLength', ),
     0xA005: ('InteroperabilityOffset', ),
-    0xA20B: ('FlashEnergy', ), # 0x920B in TIFF/EP
-    0xA20C: ('SpatialFrequencyResponse', ), # 0x920C
-    0xA20E: ('FocalPlaneXResolution', ), # 0x920E
-    0xA20F: ('FocalPlaneYResolution', ), # 0x920F
-    0xA210: ('FocalPlaneResolutionUnit', ), # 0x9210
-    0xA214: ('SubjectLocation', ), # 0x9214
-    0xA215: ('ExposureIndex', ), # 0x9215
-    0xA217: ('SensingMethod', # 0x9217
-             {1: 'Not defined',
-              2: 'One-chip color area',
-              3: 'Two-chip color area',
-              4: 'Three-chip color area',
-              5: 'Color sequential area',
-              7: 'Trilinear',
-              8: 'Color sequential linear'}),
-    0xA300: ('FileSource',
-             {1: 'Film Scanner',
-              2: 'Reflection Print Scanner',
-              3: 'Digital Camera'}),
-    0xA301: ('SceneType',
-             {1: 'Directly Photographed'}),
+    0xA20B: ('FlashEnergy', ),  # 0x920B in TIFF/EP
+    0xA20C: ('SpatialFrequencyResponse', ),  # 0x920C
+    0xA20E: ('FocalPlaneXResolution', ),  # 0x920E
+    0xA20F: ('FocalPlaneYResolution', ),  # 0x920F
+    0xA210: ('FocalPlaneResolutionUnit', ),  # 0x9210
+    0xA214: ('SubjectLocation', ),  # 0x9214
+    0xA215: ('ExposureIndex', ),  # 0x9215
+    0xA217: ('SensingMethod', {  # 0x9217
+        1: 'Not defined',
+        2: 'One-chip color area',
+        3: 'Two-chip color area',
+        4: 'Three-chip color area',
+        5: 'Color sequential area',
+        7: 'Trilinear',
+        8: 'Color sequential linear'}),
+    0xA300: ('FileSource', {
+        1: 'Film Scanner',
+        2: 'Reflection Print Scanner',
+        3: 'Digital Camera'}),
+    0xA301: ('SceneType', {
+        1: 'Directly Photographed'}),
     0xA302: ('CVAPattern', ),
-    0xA401: ('CustomRendered',
-             {0: 'Normal',
-              1: 'Custom'}),
-    0xA402: ('ExposureMode',
-             {0: 'Auto Exposure',
-              1: 'Manual Exposure',
-              2: 'Auto Bracket'}),
-    0xA403: ('WhiteBalance',
-             {0: 'Auto',
-              1: 'Manual'}),
+    0xA401: ('CustomRendered', {
+        0: 'Normal',
+        1: 'Custom'}),
+    0xA402: ('ExposureMode', {
+        0: 'Auto Exposure',
+        1: 'Manual Exposure',
+        2: 'Auto Bracket'}),
+    0xA403: ('WhiteBalance', {
+        0: 'Auto',
+        1: 'Manual'}),
     0xA404: ('DigitalZoomRatio', ),
     0xA405: ('FocalLengthIn35mmFilm', ),
-    0xA406: ('SceneCaptureType',
-             {0: 'Standard',
-              1: 'Landscape',
-              2: 'Portrait',
-              3: 'Night)'}),
-    0xA407: ('GainControl',
-             {0: 'None',
-              1: 'Low gain up',
-              2: 'High gain up',
-              3: 'Low gain down',
-              4: 'High gain down'}),
-    0xA408: ('Contrast',
-             {0: 'Normal',
-              1: 'Soft',
-              2: 'Hard'}),
-    0xA409: ('Saturation',
-             {0: 'Normal',
-              1: 'Soft',
-              2: 'Hard'}),
-    0xA40A: ('Sharpness',
-             {0: 'Normal',
-              1: 'Soft',
-              2: 'Hard'}),
+    0xA406: ('SceneCaptureType', {
+        0: 'Standard',
+        1: 'Landscape',
+        2: 'Portrait',
+        3: 'Night)'}),
+    0xA407: ('GainControl', {
+        0: 'None',
+        1: 'Low gain up',
+        2: 'High gain up',
+        3: 'Low gain down',
+        4: 'High gain down'}),
+    0xA408: ('Contrast', {
+        0: 'Normal',
+        1: 'Soft',
+        2: 'Hard'}),
+    0xA409: ('Saturation', {
+        0: 'Normal',
+        1: 'Soft',
+        2: 'Hard'}),
+    0xA40A: ('Sharpness', {
+        0: 'Normal',
+        1: 'Soft',
+        2: 'Hard'}),
     0xA40B: ('DeviceSettingDescription', ),
     0xA40C: ('SubjectDistanceRange', ),
     0xA500: ('Gamma', ),
@@ -320,15 +330,18 @@ GPS_TAGS = {
 # 0x9286 is user comment
 IGNORE_TAGS = (0x9286, 0x927C)
 
-# http://tomtia.plala.jp/DigitalCamera/MakerNote/index.asp
+
 def nikon_ev_bias(seq):
-    # First digit seems to be in steps of 1/6 EV.
-    # Does the third value mean the step size?  It is usually 6,
-    # but it is 12 for the ExposureDifference.
-    #
-    # Check for an error condition that could cause a crash.
-    # This only happens if something has gone really wrong in
-    # reading the Nikon MakerNote.
+    """
+    http://tomtia.plala.jp/DigitalCamera/MakerNote/index.asp
+
+    First digit seems to be in steps of 1/6 EV.
+    Does the third value mean the step size?  It is usually 6,
+    but it is 12 for the ExposureDifference.
+         Check for an error condition that could cause a crash.
+    This only happens if something has gone really wrong in
+    reading the Nikon MakerNote.
+    """
     if len(seq) < 4: return ""
     #
     if seq == [252, 1, 6, 0]:
@@ -361,15 +374,16 @@ def nikon_ev_bias(seq):
     if whole != 0:
         ret_str = ret_str + str(whole) + " "
     if a == 0:
-        ret_str = ret_str + "EV"
+        ret_str += "EV"
     else:
+        from exifpy.objects import Ratio
         r = Ratio(a, b)
         ret_str = ret_str + r.__repr__() + " EV"
     return ret_str
 
 # Nikon E99x MakerNote Tags
 MAKERNOTE_NIKON_NEWER_TAGS = {
-    0x0001: ('MakernoteVersion', make_string), # Sometimes binary
+    0x0001: ('MakernoteVersion', make_string),  # Sometimes binary
     0x0002: ('ISOSetting', make_string),
     0x0003: ('ColorMode', ),
     0x0004: ('Quality', ),
@@ -393,7 +407,7 @@ MAKERNOTE_NIKON_NEWER_TAGS = {
     0x0019: ('AEBracketCompensationApplied', ),
     0x001A: ('ImageProcessing', ),
     0x001B: ('CropHiSpeed', ),
-    0x001D: ('SerialNumber', ), # Conflict with 0x00A0 ?
+    0x001D: ('SerialNumber', ),  # Conflict with 0x00A0 ?
     0x001E: ('ColorSpace', ),
     0x001F: ('VRInfo', ),
     0x0020: ('ImageAuthentication', ),
@@ -432,11 +446,11 @@ MAKERNOTE_NIKON_NEWER_TAGS = {
               0x42: 'Timer, white balance bracketing'}),
     0x008A: ('AutoBracketRelease', ),
     0x008B: ('LensFStops', ),
-    0x008C: ('NEFCurve1', ), # ExifTool calls this 'ContrastCurve'
+    0x008C: ('NEFCurve1', ),  # ExifTool calls this 'ContrastCurve'
     0x008D: ('ColorMode', ),
     0x008F: ('SceneMode', ),
     0x0090: ('LightingType', ),
-    0x0091: ('ShotInfo', ), # First 4 bytes are a version number in ASCII
+    0x0091: ('ShotInfo', ),  # First 4 bytes are a version number in ASCII
     0x0092: ('HueAdjustment', ),
     # ExifTool calls this 'NEFCompression', should be 1-4
     0x0093: ('Compression', ),
@@ -448,9 +462,9 @@ MAKERNOTE_NIKON_NEWER_TAGS = {
               1: '1',
               2: '2'}),
     0x0095: ('NoiseReduction', ),
-    0x0096: ('NEFCurve2', ), # ExifTool calls this 'LinearizationTable'
-    0x0097: ('ColorBalance', ), # First 4 bytes are a version number in ASCII
-    0x0098: ('LensData', ), # First 4 bytes are a version number in ASCII
+    0x0096: ('NEFCurve2', ),  # ExifTool calls this 'LinearizationTable'
+    0x0097: ('ColorBalance', ),  # First 4 bytes are a version number in ASCII
+    0x0098: ('LensData', ),  # First 4 bytes are a version number in ASCII
     0x0099: ('RawImageCenter', ),
     0x009A: ('SensorPixelSize', ),
     0x009C: ('Scene Assist', ),
@@ -469,7 +483,7 @@ MAKERNOTE_NIKON_NEWER_TAGS = {
     0x00AA: ('Saturation', ),
     0x00AB: ('DigitalVariProgram', ),
     0x00AC: ('ImageStabilization', ),
-    0x00AD: ('Responsive AF', ), # 'AFResponse'
+    0x00AD: ('Responsive AF', ),  # 'AFResponse'
     0x00B0: ('MultiExposure', ),
     0x00B1: ('HighISONoiseReduction', ),
     0x00B7: ('AFInfo', ),
@@ -547,8 +561,9 @@ MAKERNOTE_NIKON_OLDER_TAGS = {
               6: 'Speed Light'}),
 }
 
-# decode Olympus SpecialMode tag in MakerNote
+
 def olympus_special_mode(v):
+    """decode Olympus SpecialMode tag in MakerNote"""
     a = {
         0: 'Normal',
         1: 'Unknown',
@@ -566,8 +581,9 @@ def olympus_special_mode(v):
 
 
 MAKERNOTE_OLYMPUS_TAGS = {
-    # ah HAH! those sneeeeeaky bastids! this is how they get past the fact
-    # that a JPEG thumbnail is not allowed in an uncompressed TIFF file
+    ## ah HAH! those sneeeeeaky bastids! this is how they get past the fact
+    ## that a JPEG thumbnail is not allowed in an uncompressed TIFF file
+
     0x0100: ('JPEGThumbnail', ),
     0x0200: ('SpecialMode', olympus_special_mode),
     0x0201: ('JPEGQual',
@@ -586,7 +602,7 @@ MAKERNOTE_OLYMPUS_TAGS = {
     0x0206: ('LensDistortionParams', ),
     0x0207: ('SoftwareRelease', ),
     0x0208: ('PictureInfo', ),
-    0x0209: ('CameraID', make_string), # print as string
+    0x0209: ('CameraID', make_string),  # print as string
     0x0F00: ('DataDump', ),
     0x0300: ('PreCaptureFrames', ),
     0x0404: ('SerialNumber', ),
@@ -594,7 +610,6 @@ MAKERNOTE_OLYMPUS_TAGS = {
     0x1001: ('ISOValue', ),
     0x1002: ('ApertureValue', ),
     0x1003: ('BrightnessValue', ),
-    0x1004: ('FlashMode', ),
     0x1004: ('FlashMode',
              {2: 'On',
               3: 'Off'}),
@@ -713,15 +728,15 @@ MAKERNOTE_OLYMPUS_TAG_0x2020 = {
               514: 'Custom WB 8000K', }),
     0x0501: ('WhiteBalanceTemperature', ),
     0x0502: ('WhiteBalanceBracket', ),
-    0x0503: ('CustomSaturation', ), # (3 numbers: 1. CS Value, 2. Min, 3. Max)
+    0x0503: ('CustomSaturation', ),  # (3 numbers: 1. CS Value, 2. Min, 3. Max)
     0x0504: ('ModifiedSaturation',
              {0: 'Off',
               1: 'CM1 (Red Enhance)',
               2: 'CM2 (Green Enhance)',
               3: 'CM3 (Blue Enhance)',
               4: 'CM4 (Skin Tones)'}),
-    0x0505: ('ContrastSetting', ), # (3 numbers: 1. Contrast, 2. Min, 3. Max)
-    0x0506: ('SharpnessSetting', ), # (3 numbers: 1. Sharpness, 2. Min, 3. Max)
+    0x0505: ('ContrastSetting', ),  # (3 numbers: 1. Contrast, 2. Min, 3. Max)
+    0x0506: ('SharpnessSetting', ),  # (3 numbers: 1. Sharpness, 2. Min, 3. Max)
     0x0507: ('ColorSpace',
              {0: 'sRGB',
               1: 'Adobe RGB',
@@ -796,7 +811,7 @@ MAKERNOTE_OLYMPUS_TAG_0x2020 = {
               5: 'Green'}),
     0x0600: ('Sequence', ),
     # 2 or 3 numbers: 1. Mode, 2. Shot number, 3. Mode bits
-    0x0601: ('PanoramaMode', ), # (2 numbers: 1. Mode, 2. Shot number)
+    0x0601: ('PanoramaMode', ),  # (2 numbers: 1. Mode, 2. Shot number)
     0x0603: ('ImageQuality2',
              {1: 'SQ',
               2: 'HQ',

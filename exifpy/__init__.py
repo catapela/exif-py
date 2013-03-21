@@ -276,8 +276,8 @@ def process_file(file_obj, stop_tag='UNDEF', details=True, strict=False):
     logger.debug("Endian format is {} ({})".format(
         endian, ENDIAN_FORMATS.get(endian, 'unknown')))
 
-    hdr = EXIF_header(file_obj, endian=endian, offset=offset, fake_exif=False,
-                      strict=strict, detailed=details)
+    hdr = ExifHeader(file_obj, endian=endian, offset=offset, fake_exif=False,
+                     strict=strict, detailed=details)
 
     ifd_list = hdr.list_IFDs()
     ctr = 0
