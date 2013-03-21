@@ -88,11 +88,12 @@ def _get_offset_endian_jpeg(f):
     data = bytearray(f.read(12))
     base = 2
 
-    while data[2] == '\xFF' and data[6:10] in ('JFIF', 'JFXX', 'OLYM', 'Phot'):
-        logger.debug("data[2] == 0xxFF data[3]==%x and data[6:10] = %s" % (
-            ord(data[3]), data[6:10]))
-        length = ord(data[4]) * 256 + ord(data[5])
-        logger.debug("Length offset is", length)
+    while data[2] == 0xFF and data[6:10] in ('JFIF', 'JFXX', 'OLYM', 'Phot'):
+        logger.debug("data[2] == 0xFF data[3] == {:x} and data[6:10] = {}"
+                     "".format(data[3], data[6:10]))
+        length = (data[4] * 256) + data[5]
+        assert isinstance(length, int)
+        logger.debug("Length offset is {:d}".format(length))
         f.read(length - 8)
         # fake an EXIF beginning of file
         # I don't think this is used. --gd
@@ -187,14 +188,11 @@ def _get_offset_endian_jpeg(f):
             ## I unwrapped to try and see which exception is raised
             ## (if any) and why..
 
-            _b0 = ord(data[base])
-            _b1 = ord(b[1])
-            _code2 = b[4:10]
-            logger.debug("Got {:x} {:x} and {:x} instead"
-                         "".format(_b0, _b1, _code2))
+            logger.debug("Got {:x} {:x} and {} instead"
+                         "".format(b[2], b[1], b[4:10]))
 
         ## Increment the base..
-        _base_increment = (ord(b[2]) * 256) + ord(b[3]) + 2
+        _base_increment = (b[2] * 256) + b[3] + 2
         logger.debug("Increment base by {}".format(_base_increment))
         base += _base_increment
 
@@ -205,6 +203,8 @@ def _get_offset_endian_jpeg(f):
     _data_b2 = b[2]
     _data_b6t10 = b[6:10]
     _data_b6t11 = b[6:11]
+
+    logger.debug("Exif header: {:x} {}".format(_data_b2, _data_b6t11))
 
     if _data_b2 == 0xFF:
 

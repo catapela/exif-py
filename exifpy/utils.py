@@ -83,11 +83,12 @@ class bytebuffer(object):
             else:
                 stop = item.stop + self._delta
 
-            s = slice(start, stop, item.step)
-            return self._obj[s]
+            #s = slice(start, stop, item.step)
+            return self._obj[start:stop:item.step]
 
         else:
-            return self._obj[item]
+            # return self._obj[item]
+            return self._obj[item + self._delta]
 
     def __setitem__(self, key, value):
         raise NotImplementedError

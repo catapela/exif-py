@@ -601,7 +601,7 @@ class ExifHeader(DictMixin, object):
 
         ## Some apps use MakerNote tags but do not use a format for which we
         ## have a description, so just do a raw dump for these.
-        make = tags['Image Make'].printable
+        make = tags['Image Make'].value
 
         # model = tags['Image Model'].printable # unused
 
@@ -693,4 +693,4 @@ class ExifHeader(DictMixin, object):
                 # it's not a real IFD Tag but we fake one to make everybody
             # happy. this will have a "proprietary" type
             tags['MakerNote {}'.format(name)] = \
-                IFD_Tag(printable=str(val), tag=None, field_type=0)
+                IFD_Tag(values=[str(val)], tag=None, field_type=0)

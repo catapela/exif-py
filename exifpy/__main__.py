@@ -5,6 +5,7 @@ import optparse
 import logging
 
 from . import process_file, FIELD_TYPES
+import traceback
 
 
 def main():
@@ -65,6 +66,8 @@ def main():
             message_format = "  {} ({}) = {}"
             filename_format = '{}'
 
+        failures = []
+
         for filename in args:
             print(filename_format.format(filename))
 
@@ -74,29 +77,45 @@ def main():
                 print("  Unreadable file. Skipping.")
                 continue
 
-            ## Get the tags from file..
-            data = process_file(
-                fileobj,
-                detailed=detailed,
-                strict=strict)
+            try:
+                data = process_file(
+                    fileobj,
+                    detailed=detailed,
+                    strict=strict)
 
-            # if not data:
-            #     print("  No EXIF information found")
-            #     continue
+                for key, value in sorted(data.iteritems()):
 
-            for key, value in sorted(data.iteritems()):
+                    if key in ('JPEGThumbnail', 'TIFFThumbnail'):
+                        printable = '<binary-object>'
+                        field_type = 'blob'
 
-                if key in ('JPEGThumbnail', 'TIFFThumbnail'):
-                    printable = '<binary-object>'
-                    field_type = 'blob'
-                else:
-                    printable = repr(value.printable)
-                    try:
-                        field_type = FIELD_TYPES[value.field_type][2]
-                    except IndexError:
-                        field_type = 'unknown'
+                    else:
+                        printable = repr(value.printable)
 
-                print(message_format.format(key, field_type, printable))
+                        try:
+                            field_type = FIELD_TYPES[value.field_type][2]
+                        except IndexError:
+                            field_type = 'unknown'
+
+                    print(message_format.format(key, field_type, printable))
+
+            except Exception, e:
+                if opts.debug:
+                    failures.append((filename, e))
+                traceback.print_exc()
+
+            finally:
+                fileobj.close()
+
+        if opts.debug and failures:
+            print("\n\nFailures Summary:")
+            if use_colors:
+                _fmt = "    \x1b[1m{} \x1b[1;31m{!r}\x1b[0m"
+            else:
+                _fmt = "    {} {!r}"
+
+            for failure in failures:
+                print _fmt.format(failure[0], failure[1])
 
     elif opts.format == 'json':
         ## We have some issues with this.. need work on the library
