@@ -2,7 +2,8 @@
 ExifPy Utilities
 """
 
-__all__ = ['make_string', 'make_string_uc', 'gcd', 's2n_intel', 's2n_motorola']
+__all__ = ['make_string', 'make_string_uc', 'gcd', 's2n_intel', 's2n_motorola',
+           'bytebuffer']
 
 
 def make_string(seq):
@@ -65,3 +66,38 @@ def gcd(a, b):
         return a
     else:
         return gcd(b, a % b)
+
+
+class bytebuffer(object):
+    """
+    Kind-of buffer() that works on bytearray().
+    """
+
+    def __init__(self, obj, delta=0):
+        self._obj = obj
+        self._delta = delta
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+
+            if item.start is None:
+                start = self._delta
+            else:
+                start = item.start + self._delta
+
+            if item.stop is None:
+                stop = None  # The end is the end, my friend..
+            else:
+                stop = item.stop + self._delta
+
+            s = slice(start, stop, item.step)
+            return self._obj[s]
+
+        else:
+            return self._obj[item]
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError
+
+    def __delitem__(self, key):
+        raise NotImplementedError

@@ -63,205 +63,203 @@ logger = logging.getLogger('exifpy')
 logger.debug('Hello')
 
 
-# field type descriptions as (length, abbreviation, full name) tuples
+__all__ = ['process_file']
 
 
-def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
-    """
-    process an image file (expects an open file object)
-    this is the function that has to deal with all the arbitrary nasty bits
-    of the EXIF standard
-    """
-    # yah it's cheesy...
-    global detailed  # <--- yeah, dafuq?
-    detailed = details
+def _get_offset_endian_tiff(f):
+    # it's a TIFF file
+    f.seek(0)
+    endian = f.read(1)
+    f.read(1)
+    offset = 0
+    return offset, endian
 
-    # by default do not fake an EXIF beginning
-    fake_exif = 0
 
-    # determine whether it's a JPEG or TIFF
-    data = f.read(12)
-    if data[0:4] in ('II*\x00', 'MM\x00*'):
-        # it's a TIFF file
-        f.seek(0)
-        endian = f.read(1)
-        f.read(1)
-        offset = 0
+def _get_offset_endian_jpeg(f):
+    # it's a JPEG file
 
-    elif data[0:2] == '\xFF\xD8':
-        # it's a JPEG file
-        logger.debug("JPEG format recognized data[0:2] == '0xFFD8'.")
-        base = 2
+    logger.debug("JPEG format recognized data[0:2] == '0xFFD8'.")
 
-        while data[2] == '\xFF' and data[6:10] in ('JFIF', 'JFXX', 'OLYM', 'Phot'):
-            logger.debug("data[2] == 0xxFF data[3]==%x and data[6:10] = %s" % (
-                         ord(data[3]), data[6:10]))
-            length = ord(data[4]) * 256 + ord(data[5])
-            logger.debug("Length offset is", length)
-            f.read(length - 8)
-            # fake an EXIF beginning of file
-            # I don't think this is used. --gd
-            data = '\xFF\x00' + f.read(10)
-            fake_exif = 1
-            if base > 2:
-                logger.debug("added to base ")
-                #base = base + length + 4 - 2
-                base += length + 2
-            else:
-                logger.debug("added to zero ")
-                base = length + 4
-            logger.debug("Set segment base to {}".format(base))
+    f.seek(0)
+    data = bytearray(f.read(12))
+    base = 2
 
-        # Big ugly patch to deal with APP2 (or other) data coming before APP1
-        f.seek(0)
+    while data[2] == '\xFF' and data[6:10] in ('JFIF', 'JFXX', 'OLYM', 'Phot'):
+        logger.debug("data[2] == 0xxFF data[3]==%x and data[6:10] = %s" % (
+            ord(data[3]), data[6:10]))
+        length = ord(data[4]) * 256 + ord(data[5])
+        logger.debug("Length offset is", length)
+        f.read(length - 8)
+        # fake an EXIF beginning of file
+        # I don't think this is used. --gd
+        data = '\xFF\x00' + f.read(10)
+        #fake_exif = 1
+        if base > 2:
+            logger.debug("added to base ")
+            #base = base + length + 4 - 2
+            base += length + 2
+        else:
+            logger.debug("added to zero ")
+            base = length + 4
+        logger.debug("Set segment base to {}".format(base))
 
-        # in theory, this could be insufficient since 64K is the maximum
-        # size--gd
-        data = f.read(base + 4000)
+    # Big ugly patch to deal with APP2 (or other) data coming before APP1
+    # In theory, this could be insufficient since 64K is the maximum
+    # size --gd
 
-        # base = 2
-        while True:
-            logger.debug("Segment base 0x{:X}".format(base))
+    f.seek(0)
+    data = bytearray(f.read(base + 4000))
 
-            b = buffer(data, base)
-            _data_b0t2 = b[:2]
+    ## todo: can't we do this better? like, read only what's needed, ...
 
-            if _data_b0t2 == '\xFF\xE0':
-                ## APP0
-                logger.debug("APP0 at 0x{:X}".format(base))
-                _b2 = ord(b[2])
-                _b3 = ord(b[3])
-                logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code: {}".format(b[4:8]))
+    # base = 2
+    while True:
+        logger.debug("Segment base 0x{:X}".format(base))
 
-            elif _data_b0t2 == '\xFF\xE1':
-                ## APP1
-                logger.debug("APP1 at 0x{:X}".format(base))
-                _b2 = ord(b[2])
-                _b3 = ord(b[3])
-                _code = b[4:8]
-                logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code: {}".format(_code))
-                if _code == "Exif":
-                    logger.debug("Decrement base by 2 to get to pre-segment "
-                                 "header (for compatibility with later code)")
-                    base -= 2
-                    break
+        b = bytebuffer(data, base)
+        _data_b0t2 = b[:2]
 
-            elif _data_b0t2 == '\xFF\xE2':
-                ## APP2
-                logger.debug("APP2 at 0x{:X}".format(base))
-                _b2 = ord(b[2])
-                _b3 = ord(b[3])
-                _code = b[4:8]
-                logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code: {}".format(_code))
+        if _data_b0t2 == '\xFF\xE0':
+            ## APP0
+            logger.debug("APP0 at 0x{:X}".format(base))
+            logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+            logger.debug("Code: {}".format(b[4:8]))
 
-            elif _data_b0t2 == '\xFF\xEE':
-                # APP14
-                logger.debug("APP14 (Adobe segment) at 0x{:X}".format(base))
-                _b2 = ord(b[2])
-                _b3 = ord(b[3])
-                _code = b[4:8]
-                logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code: {}".format(_code))
-                logger.debug("There is useful EXIF-like data here, but we "
-                             "have no parser for it.")
-
-            elif _data_b0t2 == '\xFF\xD8':
-                ## APP12
-                logger.debug("FFD8 segment at 0x{:X}".format(base))
-                _b0 = data[base]
-                _b1 = b[1]
-                _b2 = ord(b[2])
-                _b3 = ord(b[3])
-                _code = b[4:8]
-                _code2 = b[4:10]
-                logger.debug("Got {:x} {:x} and {:x} instead"
-                             "".format(_b0, _b1, _code2))
-                logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code: {}".format(_code))
-
-            elif _data_b0t2 == '\xFF\xEC':
-                ## APP12
-                logger.debug("APP12 XMP (Ducky) or Pictureinfo segment "
-                             "at 0x{:X}".format(base))
-                _b0 = ord(b[0])
-                _b1 = ord(b[1])
-                _b2 = ord(b[2])
-                _b3 = ord(b[3])
-                _code = b[4:8]
-                logger.debug("Got {:x} {:x} and {:x} instead"
-                             "".format(_b0, _b1, b[4:10]))
-                logger.debug("Length {:x} {:x}".format(_b2, _b3))
-                logger.debug("Code: {}".format(_code))
-                logger.debug(
-                    "There is useful EXIF-like data here (quality, "
-                    "comment, copyright), but we have no parser for it.")
-
-            elif _data_b0t2 == '\xFF\xDB':
-                logger.debug("JPEG image data at 0x{:X}."
-                             "No more segments are expected.".format(base))
+        elif _data_b0t2 == '\xFF\xE1':
+            ## APP1
+            logger.debug("APP1 at 0x{:X}".format(base))
+            logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+            logger.debug("Code: {}".format(b[4:8]))
+            if b[4:8] == "Exif":
+                logger.debug("Decrement base by 2 to get to pre-segment "
+                             "header (for compatibility with later code)")
+                base -= 2
                 break
 
-            else:
-                logger.debug("Unexpected/unhandled segment type "
-                             "or file content.")
+        elif _data_b0t2 == '\xFF\xE2':
+            ## APP2
+            logger.debug("APP2 at 0x{:X}".format(base))
+            logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+            logger.debug("Code: {}".format(b[4:8]))
 
-                ## Note: this thing was wrapped in a ``try .. except``
-                ## I unwrapped to try and see which exception is raised
-                ## (if any) and why..
+        elif _data_b0t2 == '\xFF\xEE':
+            # APP14
+            logger.debug("APP14 (Adobe segment) at 0x{:X}".format(base))
+            logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+            logger.debug("Code: {}".format(b[4:8]))
+            logger.debug("There is useful EXIF-like data here, but we "
+                         "have no parser for it.")
 
-                _b0 = ord(data[base])
-                _b1 = ord(b[1])
-                _code2 = b[4:10]
-                logger.debug("Got {:x} {:x} and {:x} instead"
-                             "".format(_b0, _b1, _code2))
+        elif _data_b0t2 == '\xFF\xD8':
+            ## APP12
+            logger.debug("FFD8 segment at 0x{:X}".format(base))
+            logger.debug("Got {:x} {:x} and {:x} instead"
+                         "".format(b[0], b[1], b[4:10]))
+            logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+            logger.debug("Code: {}".format(b[4:8]))
 
-            ## Increment the base..
-            _base_increment = (ord(b[2]) * 256) + ord(b[3]) + 2
-            logger.debug("Increment base by {}".format(_base_increment))
-            base += _base_increment
+        elif _data_b0t2 == '\xFF\xEC':
+            ## APP12
+            logger.debug("APP12 XMP (Ducky) or Pictureinfo segment "
+                         "at 0x{:X}".format(base))
+            logger.debug("Got {:x} {:x} and {:x} instead"
+                         "".format(b[0], b[1], b[4:10]))
+            logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+            logger.debug("Code: {}".format(b[4:8]))
+            logger.debug(
+                "There is useful EXIF-like data here (quality, "
+                "comment, copyright), but we have no parser for it.")
 
-        f.seek(base + 12)
+        elif _data_b0t2 == '\xFF\xDB':
+            logger.debug("JPEG image data at 0x{:X}."
+                         "No more segments are expected.".format(base))
+            break
 
-        b = buffer(data, base)
-        _data_b2 = b[2]
-        _data_b6t10 = b[6:10]
-        _data_b6t11 = b[6:11]
+        else:
+            logger.debug("Unexpected/unhandled segment type "
+                         "or file content.")
 
-        if _data_b2 == '\xFF' and _data_b6t10 == 'Exif':
+            ## Note: this thing was wrapped in a ``try .. except``
+            ## I unwrapped to try and see which exception is raised
+            ## (if any) and why..
+
+            _b0 = ord(data[base])
+            _b1 = ord(b[1])
+            _code2 = b[4:10]
+            logger.debug("Got {:x} {:x} and {:x} instead"
+                         "".format(_b0, _b1, _code2))
+
+        ## Increment the base..
+        _base_increment = (ord(b[2]) * 256) + ord(b[3]) + 2
+        logger.debug("Increment base by {}".format(_base_increment))
+        base += _base_increment
+
+    ## Jump ahead after file headers..
+    f.seek(base + 12)
+
+    b = bytebuffer(data, base)
+    _data_b2 = b[2]
+    _data_b6t10 = b[6:10]
+    _data_b6t11 = b[6:11]
+
+    if _data_b2 == 0xFF:
+
+        if _data_b6t10 == 'Exif':
             ## detected EXIF header
             offset = f.tell()
             endian = f.read(1)
+            return offset, endian
             #HACK TEST:  endian = 'M'
 
-        elif _data_b2 == '\xFF' and _data_b6t11 == 'Ducky':
+        elif _data_b6t11 == 'Ducky':
             ## detected Ducky header.
             logger.debug("EXIF-like header (normally 0xFF and code): "
                          "{:x} and {}".format(_data_b2, _data_b6t11))
             offset = f.tell()
             endian = f.read(1)
+            return offset, endian
 
-        elif _data_b2 == '\xFF' and _data_b6t11 == 'Adobe':
+        elif _data_b6t11 == 'Adobe':
             ## detected APP14 (Adobe)
             logger.debug("EXIF-like header (normally 0xFF and code): "
                          "{:x} and {}".format(_data_b2, _data_b6t11))
             offset = f.tell()
             endian = f.read(1)
-
-        else:
-            # no EXIF information
-            logger.debug("No EXIF header found:\n"
-                         "    Expected b[2]==0xFF and "
-                         "b[6:10]=='Exif'' (or 'Duck')\n"
-                         "    Got: {:x} and {}".format(_data_b2, _data_b6t11))
-            return {}
+            return offset, endian
 
     else:
-        ## File format not recognized -- skip
-        logger.critical("File format not recognized")
-        return {}
+        ## No EXIF information found -- error!!
+        logger.debug(
+            "No EXIF header found:\n"
+            "    Expected b[2]==0xFF and b[6:10]=='Exif'' (or 'Duck')\n"
+            "    Got: {:x} and {}".format(_data_b2, _data_b6t11))
+        raise TypeError("No EXIF header found")
+
+
+def _get_offset_endian(f):
+    """Get offset and endian type from a TIFF or JPEG file"""
+
+    f.seek(0)
+    data = bytearray(f.read(12))
+
+    if data[0:4] in ('II*\x00', 'MM\x00*'):
+        return _get_offset_endian_tiff(f)
+
+    elif data[0:2] == '\xFF\xD8':
+        return _get_offset_endian_jpeg(f)
+
+    raise TypeError("Unrecognised file format")
+
+
+def process_file(f, stop_tag='UNDEF', details=True, strict=False):
+    """
+    process an image file (expects an open file object)
+    this is the function that has to deal with all the arbitrary nasty bits
+    of the EXIF standard
+    """
+
+    ## To replace everything down there....
+    offset, endian = _get_offset_endian(f)
 
     ENDIAN_FORMATS = {
         'I': 'Intel',
@@ -273,9 +271,13 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
     logger.debug("Endian format is {} ({})".format(
         endian, ENDIAN_FORMATS.get(endian, 'unknown')))
 
-    hdr = EXIF_header(f, endian, offset, fake_exif, strict, debug)
+    hdr = EXIF_header(f, endian=endian, offset=offset, fake_exif=False,
+                      strict=strict, detailed=details)
+
     ifd_list = hdr.list_IFDs()
     ctr = 0
+    thumb_ifd = None
+
     for i in ifd_list:
         if ctr == 0:
             IFD_name = 'Image'
@@ -284,55 +286,58 @@ def process_file(f, stop_tag='UNDEF', details=True, strict=False, debug=False):
             thumb_ifd = i
         else:
             IFD_name = 'IFD %d' % ctr
-        if debug:
-            print(' IFD %d (%s) at offset %d:' % (ctr, IFD_name, i))
+        logger.debug(' IFD %d (%s) at offset %d:' % (ctr, IFD_name, i))
         hdr.dump_IFD(i, IFD_name, stop_tag=stop_tag)
-        # EXIF IFD
-        exif_off = hdr.tags.get(IFD_name+' ExifOffset')
-        if exif_off:
-            if debug:
-                print(' EXIF SubIFD at offset %d:' % exif_off.values[0])
-            hdr.dump_IFD(exif_off.values[0], 'EXIF', stop_tag=stop_tag)
+
+        ## EXIF IFD
+        exif_offset = hdr.tags.get(IFD_name + ' ExifOffset')
+        if exif_offset:
+            logger.debug(' EXIF SubIFD at offset %d:' % exif_offset.values[0])
+            hdr.dump_IFD(exif_offset.values[0], 'EXIF', stop_tag=stop_tag)
             # Interoperability IFD contained in EXIF IFD
-            intr_off = hdr.tags.get('EXIF SubIFD InteroperabilityOffset')
-            if intr_off:
-                if debug:
-                    print(' EXIF Interoperability SubSubIFD at offset %d:' \
-                          % intr_off.values[0])
-                hdr.dump_IFD(intr_off.values[0], 'EXIF Interoperability',
-                             dict=INTR_TAGS, stop_tag=stop_tag)
-            # GPS IFD
-        gps_off = hdr.tags.get(IFD_name+' GPSInfo')
-        if gps_off:
-            if debug:
-                print(' GPS SubIFD at offset %d:' % gps_off.values[0])
-            hdr.dump_IFD(gps_off.values[0], 'GPS', dict=GPS_TAGS, stop_tag=stop_tag)
+            intr_offset = hdr.tags.get('EXIF SubIFD InteroperabilityOffset')
+            if intr_offset:
+                logger.debug(' EXIF Interoperability SubSubIFD at offset {:d}:'
+                             ''.format(intr_offset.values[0]))
+                hdr.dump_IFD(intr_offset.values[0], 'EXIF Interoperability',
+                             context=INTR_TAGS, stop_tag=stop_tag)
+
+        ## GPS IFD
+        gps_offset = hdr.tags.get(IFD_name + ' GPSInfo')
+        if gps_offset:
+            logger.debug(' GPS SubIFD at offset %d:' % gps_offset.values[0])
+            hdr.dump_IFD(gps_offset.values[0], 'GPS', context=GPS_TAGS,
+                         stop_tag=stop_tag)
         ctr += 1
 
-    # extract uncompressed TIFF thumbnail
+    ## Extract uncompressed TIFF thumbnail
     thumb = hdr.tags.get('Thumbnail Compression')
-    if thumb and thumb.printable == 'Uncompressed TIFF':
+    if thumb_ifd is not None \
+            and thumb \
+            and thumb.printable == 'Uncompressed TIFF':
         hdr.extract_TIFF_thumbnail(thumb_ifd)
 
-    # JPEG thumbnail (thankfully the JPEG data is stored as a unit)
+    ## JPEG thumbnail (thankfully the JPEG data is stored as a unit)
     thumb_off = hdr.tags.get('Thumbnail JPEGInterchangeFormat')
     if thumb_off:
-        f.seek(offset+thumb_off.values[0])
+        f.seek(offset + thumb_off.values[0])
         size = hdr.tags['Thumbnail JPEGInterchangeFormatLength'].values[0]
         hdr.tags['JPEGThumbnail'] = f.read(size)
 
-    # deal with MakerNote contained in EXIF IFD
-    # (Some apps use MakerNote tags but do not use a format for which we
-    # have a description, do not process these).
-    if 'EXIF MakerNote' in hdr.tags and 'Image Make' in hdr.tags and detailed:
+    ## Deal with MakerNote contained in EXIF IFD
+    ## (Some apps use MakerNote tags but do not use a format for which we
+    ## have a description, do not process these).
+    if details and \
+            ('EXIF MakerNote' in hdr.tags) and \
+            ('Image Make' in hdr.tags):
         hdr.decode_maker_note()
 
-    # Sometimes in a TIFF file, a JPEG thumbnail is hidden in the MakerNote
-    # since it's not allowed in a uncompressed TIFF IFD
+    ## Sometimes in a TIFF file, a JPEG thumbnail is hidden in the MakerNote
+    ## since it's not allowed in a uncompressed TIFF IFD
     if 'JPEGThumbnail' not in hdr.tags:
-        thumb_off=hdr.tags.get('MakerNote JPEGThumbnail')
+        thumb_off = hdr.tags.get('MakerNote JPEGThumbnail')
         if thumb_off:
-            f.seek(offset+thumb_off.values[0])
-            hdr.tags['JPEGThumbnail']=file.read(thumb_off.field_length)
+            f.seek(offset + thumb_off.values[0])
+            hdr.tags['JPEGThumbnail'] = file.read(thumb_off.field_length)
 
     return hdr.tags

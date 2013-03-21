@@ -81,8 +81,7 @@ def main():
                 fileobj,
                 stop_tag=stop_tag,
                 details=detailed,
-                strict=strict,
-                debug=debug)
+                strict=strict)
 
             if not data:
                 print("  No EXIF information found")

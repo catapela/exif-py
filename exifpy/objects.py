@@ -7,7 +7,7 @@ from .constants.field_types import FIELD_TYPES
 from .utils import *
 
 
-class Ratio:
+class Ratio(object):
     def __init__(self, num, den):
         self.num = num
         self.den = den
@@ -18,6 +18,9 @@ class Ratio:
             return str(self.num)
         return '%d/%d' % (self.num, self.den)
 
+    def __str__(self):
+        return self.__repr__()
+
     def reduce(self):
         div = gcd(self.num, self.den)
         if div > 1:
@@ -25,8 +28,8 @@ class Ratio:
             self.den = self.den / div
 
 
-# for ease of dealing with tags
-class IFD_Tag:
+class IFD_Tag(object):
+    """For ease of dealing with tags"""
     def __init__(self, printable, tag, field_type, values, field_offset,
                  field_length):
         # printable version of data
@@ -52,7 +55,7 @@ class IFD_Tag:
                 FIELD_TYPES[self.field_type][2],
                 self.printable,
                 self.field_offset)
-        except:
+        except:  # <---- except what?
             s = '(%s) %s=%s @ %s' % (
                 str(self.tag),
                 FIELD_TYPES[self.field_type][2],
@@ -60,87 +63,94 @@ class IFD_Tag:
                 str(self.field_offset))
         return s
 
+    def to_python(self):
+        raise NotImplementedError  # todo: write this..
 
-# class that handles an EXIF header
-class EXIF_header:
-    def __init__(self, file, endian, offset, fake_exif, strict, debug=0):
-        self.file = file
+
+class EXIF_header(object):
+    """Class that handles an EXIF header"""
+
+    def __init__(self, file_obj, endian, offset, fake_exif, strict,
+                 detailed=True, debug=False):
+        self.file = file_obj
         self.endian = endian
         self.offset = offset
         self.fake_exif = fake_exif
         self.strict = strict
+        self.detailed = detailed
         self.debug = debug
         self.tags = {}
 
-    # convert slice to integer, based on sign and endian flags
-    # usually this offset is assumed to be relative to the beginning of the
-    # start of the EXIF information.  For some cameras that use relative tags,
-    # this offset may be relative to some other starting point.
     def s2n(self, offset, length, signed=0):
-        self.file.seek(self.offset+offset)
-        slice=self.file.read(length)
+        """
+        Convert slice to integer, based on sign and endian flags
+        Usually this offset is assumed to be relative to the beginning of the
+        start of the EXIF information.  For some cameras that use relative tags,
+        this offset may be relative to some other starting point.
+        """
+        self.file.seek(self.offset + offset)
+        chunk = self.file.read(length)
         if self.endian == 'I':
-            val=s2n_intel(slice)
+            val = s2n_intel(chunk)
         else:
-            val=s2n_motorola(slice)
+            val = s2n_motorola(chunk)
             # Sign extension ?
         if signed:
-            msb=1 << (8*length-1)
+            msb = 1 << (8 * length - 1)
             if val & msb:
-                val=val-(msb << 1)
+                val -= msb << 1
         return val
 
-    # convert offset to string
     def n2s(self, offset, length):
+        """Convert offset to string"""
         s = ''
         for dummy in range(length):
             if self.endian == 'I':
-                s = s + chr(offset & 0xFF)
+                s += chr(offset & 0xFF)
             else:
                 s = chr(offset & 0xFF) + s
-            offset = offset >> 8
+            offset >>= 8
         return s
 
-    # return first IFD
     def first_IFD(self):
+        """Return first IFD"""
         return self.s2n(4, 4)
 
-    # return pointer to next IFD
     def next_IFD(self, ifd):
-        entries=self.s2n(ifd, 2)
-        next_ifd = self.s2n(ifd+2+12*entries, 4)
+        """Return pointer to next IFD"""
+        entries = self.s2n(ifd, 2)
+        next_ifd = self.s2n(ifd + 2 + 12 * entries, 4)
         if next_ifd == ifd:
             return 0
         else:
             return next_ifd
 
-    # return list of IFDs in header
     def list_IFDs(self):
-        i=self.first_IFD()
-        a=[]
+        """Return list of IFDs in header"""
+        i = self.first_IFD()
         while i:
-            a.append(i)
-            i=self.next_IFD(i)
-        return a
+            yield i
+            i = self.next_IFD(i)
 
-    # return list of entries in this IFD
-    def dump_IFD(self, ifd, ifd_name, dict=EXIF_TAGS, relative=0, stop_tag='UNDEF'):
-        entries=self.s2n(ifd, 2)
+    def dump_IFD(self, ifd, ifd_name, context=EXIF_TAGS, relative=0,
+                 stop_tag='UNDEF'):
+        """Return list of entries in this IFD"""
+        entries = self.s2n(ifd, 2)
         for i in range(entries):
             # entry is index of start of this IFD in the file
             entry = ifd + 2 + 12 * i
             tag = self.s2n(entry, 2)
 
             # get tag name early to avoid errors, help debug
-            tag_entry = dict.get(tag)
+            tag_entry = context.get(tag)
             if tag_entry:
                 tag_name = tag_entry[0]
             else:
                 tag_name = 'Tag 0x%04X' % tag
 
             # ignore certain tags for faster processing  # todo: fix this..
-            #if not (not detailed and tag in IGNORE_TAGS):
-            if True:
+            #if not (not self.detailed and tag in IGNORE_TAGS):  # <-- WTF?
+            if self.detailed or tag not in IGNORE_TAGS:
                 field_type = self.s2n(entry + 2, 2)
 
                 # unknown field type
@@ -160,11 +170,12 @@ class EXIF_header:
                 # need to jump ahead again.
                 if count * typelen > 4:
                     # offset is not the value; it's a pointer to the value
-                    # if relative we set things up so s2n will seek to the right
-                    # place when it adds self.offset.  Note that this 'relative'
-                    # is for the Nikon type 3 makernote.  Other cameras may use
-                    # other relative offsets, which would have to be computed here
-                    # slightly differently.
+                    # if relative we set things up so s2n will seek to the
+                    # right place when it adds self.offset.
+                    # Note that this 'relative' is for the Nikon type 3
+                    # makernote.
+                    # Other cameras may use other relative offsets, which
+                    # would have to be computed here slightly differently.
                     if relative:
                         tmp_offset = self.s2n(offset, 4)
                         offset = tmp_offset + ifd - 8
@@ -178,7 +189,7 @@ class EXIF_header:
                     # special case: null-terminated ASCII string
                     # XXX investigate
                     # sometimes gets too big to fit in int value
-                    if count != 0: # and count < (2**31):  # 2E31 is hardware dependant. --gd
+                    if count != 0:  # and count < (2**31):  # 2E31 is hardware dependant. --gd
                         try:
                             self.file.seek(self.offset + offset)
                             values = self.file.read(count)
@@ -216,11 +227,11 @@ class EXIF_header:
 
                 # now 'values' is either a string or an array
                 if count == 1 and field_type != 2:
-                    printable=str(values[0])
-                elif count > 50 and len(values) > 20 :
-                    printable=str( values[0:20] )[0:-1] + ", ... ]"
+                    printable = str(values[0])
+                elif count > 50 and len(values) > 20:
+                    printable = str(values[0:20])[0:-1] + ", ... ]"
                 else:
-                    printable=str(values)
+                    printable = str(values)
 
                 # compute printable version of values
                 if tag_entry:
@@ -314,26 +325,28 @@ class EXIF_header:
 
         self.tags['TIFFThumbnail'] = tiff
 
-    # decode all the camera-specific MakerNote formats
-
-    # Note is the data that comprises this MakerNote.  The MakerNote will
-    # likely have pointers in it that point to other parts of the file.  We'll
-    # use self.offset as the starting point for most of those pointers, since
-    # they are relative to the beginning of the file.
-    #
-    # If the MakerNote is in a newer format, it may use relative addressing
-    # within the MakerNote.  In that case we'll use relative addresses for the
-    # pointers.
-    #
-    # As an aside: it's not just to be annoying that the manufacturers use
-    # relative offsets.  It's so that if the makernote has to be moved by the
-    # picture software all of the offsets don't have to be adjusted.  Overall,
-    # this is probably the right strategy for makernotes, though the spec is
-    # ambiguous.  (The spec does not appear to imagine that makernotes would
-    # follow EXIF format internally.  Once they did, it's ambiguous whether
-    # the offsets should be from the header at the start of all the EXIF info,
-    # or from the header at the start of the makernote.)
     def decode_maker_note(self):
+        """
+        decode all the camera-specific MakerNote formats
+
+        Note is the data that comprises this MakerNote.  The MakerNote will
+        likely have pointers in it that point to other parts of the file.  We'll
+        use self.offset as the starting point for most of those pointers, since
+        they are relative to the beginning of the file.
+
+        If the MakerNote is in a newer format, it may use relative addressing
+        within the MakerNote.  In that case we'll use relative addresses for the
+        pointers.
+
+        As an aside: it's not just to be annoying that the manufacturers use
+        relative offsets.  It's so that if the makernote has to be moved by the
+        picture software all of the offsets don't have to be adjusted.  Overall,
+        this is probably the right strategy for makernotes, though the spec is
+        ambiguous.  (The spec does not appear to imagine that makernotes would
+        follow EXIF format internally.  Once they did, it's ambiguous whether
+        the offsets should be from the header at the start of all the EXIF info,
+        or from the header at the start of the makernote.)
+        """
         note = self.tags['EXIF MakerNote']
 
         # Some apps use MakerNote tags but do not use a format for which we
@@ -355,7 +368,7 @@ class EXIF_header:
                 if self.debug:
                     print("Looks like a type 1 Nikon MakerNote.")
                 self.dump_IFD(note.field_offset+8, 'MakerNote',
-                              dict=MAKERNOTE_NIKON_OLDER_TAGS)
+                              context=MAKERNOTE_NIKON_OLDER_TAGS)
             elif note.values[0:7] == [78, 105, 107, 111, 110, 0, 2]:
                 if self.debug:
                     print("Looks like a labeled type 2 Nikon MakerNote")
@@ -363,19 +376,19 @@ class EXIF_header:
                     raise ValueError("Missing marker tag '42' in MakerNote.")
                     # skip the Makernote label and the TIFF header
                 self.dump_IFD(note.field_offset+10+8, 'MakerNote',
-                              dict=MAKERNOTE_NIKON_NEWER_TAGS, relative=1)
+                              context=MAKERNOTE_NIKON_NEWER_TAGS, relative=1)
             else:
                 # E99x or D1
                 if self.debug:
                     print("Looks like an unlabeled type 2 Nikon MakerNote")
                 self.dump_IFD(note.field_offset, 'MakerNote',
-                              dict=MAKERNOTE_NIKON_NEWER_TAGS)
+                              context=MAKERNOTE_NIKON_NEWER_TAGS)
             return
 
         # Olympus
         if make.startswith('OLYMPUS'):
             self.dump_IFD(note.field_offset+8, 'MakerNote',
-                          dict=MAKERNOTE_OLYMPUS_TAGS)
+                          context=MAKERNOTE_OLYMPUS_TAGS)
             # XXX TODO
             #for i in (('MakerNote Tag 0x2020', MAKERNOTE_OLYMPUS_TAG_0x2020),):
             #    self.decode_olympus_tag(self.tags[i[0]].values, i[1])
@@ -384,7 +397,7 @@ class EXIF_header:
         # Casio
         if 'CASIO' in make or 'Casio' in make:
             self.dump_IFD(note.field_offset, 'MakerNote',
-                          dict=MAKERNOTE_CASIO_TAGS)
+                          context=MAKERNOTE_CASIO_TAGS)
             return
 
         # Fujifilm
@@ -398,7 +411,7 @@ class EXIF_header:
             offset = self.offset
             self.offset += note.field_offset
             # process note with bogus values (note is actually at offset 12)
-            self.dump_IFD(12, 'MakerNote', dict=MAKERNOTE_FUJIFILM_TAGS)
+            self.dump_IFD(12, 'MakerNote', context=MAKERNOTE_FUJIFILM_TAGS)
             # reset to correct values
             self.endian = endian
             self.offset = offset
@@ -407,31 +420,30 @@ class EXIF_header:
         # Canon
         if make == 'Canon':
             self.dump_IFD(note.field_offset, 'MakerNote',
-                          dict=MAKERNOTE_CANON_TAGS)
+                          context=MAKERNOTE_CANON_TAGS)
             for i in (('MakerNote Tag 0x0001', MAKERNOTE_CANON_TAG_0x001),
                       ('MakerNote Tag 0x0004', MAKERNOTE_CANON_TAG_0x004)):
                 if i[0] in self.tags:
                     self.canon_decode_tag(self.tags[i[0]].values, i[1])
             return
 
-
     # XXX TODO decode Olympus MakerNote tag based on offset within tag
-    def olympus_decode_tag(self, value, dict):
+    def olympus_decode_tag(self, value, context):
         pass
 
     # decode Canon MakerNote tag based on offset within tag
     # see http://www.burren.cx/david/canon.html by David Burren
-    def canon_decode_tag(self, value, dict):
+    def canon_decode_tag(self, value, context):
         for i in range(1, len(value)):
-            x=dict.get(i, ('Unknown', ))
+            x = context.get(i, ('Unknown', ))
             if self.debug:
                 print(i, x)
-            name=x[0]
+            name = x[0]
             if len(x) > 1:
-                val=x[1].get(value[i], 'Unknown')
+                val = x[1].get(value[i], 'Unknown')
             else:
-                val=value[i]
+                val = value[i]
                 # it's not a real IFD Tag but we fake one to make everybody
             # happy. this will have a "proprietary" type
-            self.tags['MakerNote '+name]=IFD_Tag(str(val), None, 0, None,
-                                                 None, None)
+            self.tags['MakerNote ' + name] = IFD_Tag(str(val), None, 0, None,
+                                                     None, None)
