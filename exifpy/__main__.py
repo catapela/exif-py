@@ -6,6 +6,7 @@ import logging
 
 from . import process_file, FIELD_TYPES
 import traceback
+from exifpy.exceptions import ExifPyGoodException
 
 
 def main():
@@ -27,6 +28,9 @@ def main():
         '-d', '--debug', action='store_true', dest='debug', default=False,
         help='Run in debug mode (display extra info)')
     option_parser.add_option(
+        '--exc-report', action='store_true', dest='exc_report', default=False,
+        help='Print report of exceptions after execution.')
+    option_parser.add_option(
         '-f', '--format', action='store', dest='format', default='human',
         help='Specify the desired output format. Allowed values are: '
              'human (the default), json, csv.')
@@ -40,6 +44,7 @@ def main():
     logger = logging.getLogger('exifpy')
     logger.addHandler(logging.StreamHandler(sys.stderr))
     if opts.debug:
+        opts.exc_report = True
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
@@ -49,15 +54,17 @@ def main():
     strict = opts.strict
 
     if opts.color == 'auto':
-        use_colors = sys.stdout.isatty()
+        use_colors_stdout = sys.stdout.isatty()
+        use_colors_stderr = sys.stderr.isatty()
 
     else:
-        use_colors = opts.color == 'always'
+        use_colors_stdout = opts.color == 'always'
+        use_colors_stderr = opts.color == 'always'
 
     ## Output info for each file
     if opts.format == 'human':
 
-        if use_colors:
+        if use_colors_stdout:
             message_format = \
                 "  \x1b[1;36m{}\x1b[0m \x1b[0;36m({})\x1b[0m" \
                 " = \x1b[1;32m{}\x1b[0m"
@@ -100,7 +107,7 @@ def main():
                     print(message_format.format(key, field_type, printable))
 
             except Exception, e:
-                if opts.debug:
+                if opts.exc_report:
                     failures.append((filename, e))
                 traceback.print_exc()
 
@@ -109,15 +116,20 @@ def main():
 
             print("")
 
-        if opts.debug and failures:
+        if opts.exc_report and failures:
             print("\n\nFailures Summary:")
-            if use_colors:
-                _fmt = "    \x1b[1m{} \x1b[1;31m{!r}\x1b[0m"
+            if use_colors_stderr:
+                _fmtBad = "    \x1b[1m{} \x1b[1;31m{!r}\x1b[0m\n"
+                _fmtGood = "    \x1b[1m{} \x1b[1;32m{!r}\x1b[0m\n"
             else:
-                _fmt = "    {} {!r}"
+                _fmtBad = "    !!! {} {!r}\n"
+                _fmtGood = "        {} {!r}\n"
 
-            for failure in failures:
-                print _fmt.format(failure[0], failure[1])
+            for filename, exc in failures:
+                if isinstance(exc, ExifPyGoodException):
+                    sys.stderr.write(_fmtGood.format(filename, exc))
+                else:
+                    sys.stderr.write(_fmtBad.format(filename, exc))
 
     elif opts.format == 'json':
         ## We have some issues with this.. need work on the library

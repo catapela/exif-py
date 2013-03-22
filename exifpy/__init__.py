@@ -61,6 +61,7 @@ ExifPy Main Module
 import logging
 from exifpy.constants.tags import EXIF_TAGS, GPS_TAGS, INTR_TAGS, ENDIAN_FORMATS
 from exifpy.constants.field_types import FIELD_TYPES
+from exifpy.exceptions import UnsupportedFormat, NoExifData
 from exifpy.utils import make_string, bytebuffer
 from exifpy.objects import ExifHeader
 
@@ -237,7 +238,7 @@ def _get_offset_endian_jpeg(f):
             "No EXIF header found:\n"
             "    Expected b[2]==0xFF and b[6:10]=='Exif'' (or 'Duck')\n"
             "    Got: {:x} and {}".format(_data_b2, _data_b6t11))
-        raise TypeError("No EXIF header found")
+        raise NoExifData("No EXIF header found")
 
 
 def _get_offset_endian(f):
@@ -247,12 +248,14 @@ def _get_offset_endian(f):
     data = bytearray(f.read(12))
 
     if data[0:4] in ('II*\x00', 'MM\x00*'):
+        ## This is a TIFF file
         return _get_offset_endian_tiff(f)
 
     elif data[0:2] == '\xFF\xD8':
+        ## This is a JPEG file
         return _get_offset_endian_jpeg(f)
 
-    raise TypeError("Unrecognised file format")
+    raise UnsupportedFormat("Unrecognised file format")
 
 
 def process_file(file_obj, detailed=True, strict=False):
@@ -281,3 +284,10 @@ def process_file(file_obj, detailed=True, strict=False):
         offset=offset,
         strict=strict,
         detailed=detailed)
+
+
+def process_file_by_name(filename, **kwargs):
+    return process_file(
+        open(filename, 'rb'),
+        **kwargs
+    )
