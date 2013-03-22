@@ -2,6 +2,8 @@
 ExifPy Utilities
 """
 
+import struct
+
 
 def make_string(seq):
     """
@@ -32,22 +34,55 @@ def make_string_uc(seq):
     return make_string(make_string(seq))
 
 
-def s2n_motorola(input_string):
-    """Extract multibyte integer in Motorola format (little endian)"""
-    x = 0
-    for c in input_string:
-        x = (x << 8) | ord(c)
-    return x
+def _get_pack_format(size=4, signed=False, little_endian=False):
+    fmt = ''
+    fmt += '<' if little_endian else '>'
+    if size == 1:
+        fmt += 'B' if not signed else 'b'
+    elif size == 2:
+        fmt += 'H' if not signed else 'h'
+    elif size == 4:
+        fmt += 'I' if not signed else 'i'
+    elif size == 8:
+        fmt += 'Q' if not signed else 'q'
+    else:
+        raise ValueError("Unsupported non-standard size!")
+    return fmt
 
 
-def s2n_intel(input_string):
-    """Extract multibyte integer in Intel format (big endian)"""
-    number = 0
-    position = 0
-    for c in input_string:
-        number |= ord(c) << position
-        position += 8
-    return number
+def decode_int(input_string, signed=False, little_endian=True):
+    size = len(input_string)
+    fmt = _get_pack_format(size=size, signed=signed,
+                           little_endian=little_endian)
+    return struct.unpack(fmt, input_string)[0]
+
+
+def encode_int(number, size=4, signed=False, little_endian=True):
+    fmt = _get_pack_format(size=size, signed=signed,
+                           little_endian=little_endian)
+    return struct.pack(fmt, number)
+
+
+def unpack_motorola(input_string, signed=False):
+    """Extract multibyte integer in Motorola format (big endian)"""
+    return decode_int(input_string, signed=signed, little_endian=False)
+
+
+def unpack_intel(input_string, signed=False):
+    """Extract multibyte integer in Intel format (little endian)"""
+    return decode_int(input_string, signed=signed, little_endian=True)
+
+
+def pack_intel(input_number, length=4, signed=False):
+    """Convert int to little-endian-packed string"""
+    return encode_int(input_number, size=length, signed=signed,
+                      little_endian=True)
+
+
+def pack_motorola(input_number, length=4, signed=False):
+    """Convert int to big-endian-packed string"""
+    return encode_int(input_number, size=length, signed=signed,
+                      little_endian=False)
 
 
 def gcd(a, b):

@@ -272,7 +272,7 @@ class ExifHeader(DictMixin, object):
     def _read_int(self, offset, length, signed=False):
         """
         Reads ``length`` characters from the relative offset ``offset``.
-        Converts the number to integer depending on found endianess.
+        Converts the number to integer depending on found endianness.
 
         Convert slice to integer, based on sign and endian flags
         Usually this offset is assumed to be relative to the beginning of the
@@ -283,28 +283,18 @@ class ExifHeader(DictMixin, object):
         self.file.seek(self.offset + offset)
         chunk = self.file.read(length)
         if self.endian == 'I':
-            val = s2n_intel(chunk)
+            return unpack_intel(chunk, signed=signed)
         else:
-            val = s2n_motorola(chunk)
-        # Sign extension ?
-        if signed:
-            msb = 1 << (8 * length - 1)
-            if val & msb:
-                val -= msb << 1
-        return val
+            return unpack_motorola(chunk, signed=signed)
 
-    def _encode_int(self, offset, length):
+    def _encode_int(self, number, length):
         """
-        Convert an int to its binary representation, considering endianess
+        Convert an int to its binary representation, considering endianness
         """
-        s = []
-        for dummy in range(length):
-            if self.endian == 'I':
-                s.append(chr(offset & 0xFF))
-            else:
-                s.insert(0, chr(offset & 0xFF))
-            offset >>= 8
-        return ''.join(s)
+        if self.endian == 'I':
+            return pack_intel(number, length=length)
+        else:
+            return pack_motorola(number, length=length)
 
     def _first_ifd(self):
         """Return first IFD"""
