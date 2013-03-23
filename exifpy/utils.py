@@ -102,40 +102,40 @@ def gcd(a, b):
         return gcd(b, a % b)
 
 
-class bytebuffer(object):
-    """
-    Kind-of buffer() that works on bytearray().
-    """
-
-    def __init__(self, obj, delta=0):
-        self._obj = obj
-        self._delta = delta
-
-    def __getitem__(self, item):
-        if isinstance(item, slice):
-
-            if item.start is None:
-                start = self._delta
-            else:
-                start = item.start + self._delta
-
-            if item.stop is None:
-                stop = None  # The end is the end, my friend..
-            else:
-                stop = item.stop + self._delta
-
-            #s = slice(start, stop, item.step)
-            return self._obj[start:stop:item.step]
-
-        else:
-            # return self._obj[item]
-            return self._obj[item + self._delta]
-
-    def __setitem__(self, key, value):
-        raise NotImplementedError
-
-    def __delitem__(self, key):
-        raise NotImplementedError
+# class bytebuffer(object):
+#     """
+#     Kind-of buffer() that works on bytearray().
+#     """
+#
+#     def __init__(self, obj, delta=0):
+#         self._obj = obj
+#         self._delta = delta
+#
+#     def __getitem__(self, item):
+#         if isinstance(item, slice):
+#
+#             if item.start is None:
+#                 start = self._delta
+#             else:
+#                 start = item.start + self._delta
+#
+#             if item.stop is None:
+#                 stop = None  # The end is the end, my friend..
+#             else:
+#                 stop = item.stop + self._delta
+#
+#             #s = slice(start, stop, item.step)
+#             return self._obj[start:stop:item.step]
+#
+#         else:
+#             # return self._obj[item]
+#             return self._obj[item + self._delta]
+#
+#     def __setitem__(self, key, value):
+#         raise NotImplementedError
+#
+#     def __delitem__(self, key):
+#         raise NotImplementedError
 
 
 class FileSeek(object):
