@@ -285,10 +285,10 @@ TAGS_LIBRARY['exif'] = EXIF_TAGS = {
 
 # Description of endian formats
 ENDIAN_FORMATS = {
-    'I': 'Intel',
-    'M': 'Motorola',
-    '\x01': 'Adobe Ducky',
-    'd': 'XMP/Adobe unknown',
+    'I': 'Intel (Little endian)',
+    'M': 'Motorola (Big endian)',
+    '\x01': 'Adobe Ducky (Big endian)',
+    'd': 'XMP/Adobe unknown (Big endian)',
 }
 
 # interoperability tags
