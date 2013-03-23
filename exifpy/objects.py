@@ -7,7 +7,8 @@ import logging
 import warnings
 
 from .constants.tags import *
-from .constants.field_types import FIELD_TYPES, FT_ASCII, FT_SIGNED_BYTE, FT_SIGNED_RATIO, FT_SIGNED_LONG, FT_SIGNED_SHORT, FT_RATIO
+from .constants.field_types import FIELD_TYPES, FT_ASCII, FT_SIGNED_BYTE, \
+    FT_SIGNED_RATIO, FT_SIGNED_LONG, FT_SIGNED_SHORT, FT_RATIO
 from exifpy import INTR_TAGS
 from .utils import *
 
@@ -26,8 +27,15 @@ class Ratio(object):
         self.reduce()
         if self.den == 1:
             return str(self.num)
+
+        try:
+            # todo: any better way to do this?
+            ratio = float(self)
+        except ZeroDivisionError:
+            ratio = 0
+
         return '<Ratio {:d}/{:d} (~{:.2f})>' \
-               ''.format(self.num, self.den, float(self))
+               ''.format(self.num, self.den, ratio)
 
     def __str__(self):
         return self.__repr__()

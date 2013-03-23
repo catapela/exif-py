@@ -62,7 +62,7 @@ import logging
 from exifpy.constants.tags import EXIF_TAGS, GPS_TAGS, INTR_TAGS, ENDIAN_FORMATS
 from exifpy.constants.field_types import FIELD_TYPES
 from exifpy.exceptions import UnsupportedFormat, NoExifData
-from exifpy.utils import make_string, bytebuffer
+from exifpy.utils import make_string, mmapbytes
 from exifpy.objects import ExifHeader
 
 logger = logging.getLogger('exifpy')
@@ -109,20 +109,24 @@ def _get_offset_endian_jpeg(f):
             base = length + 4
         logger.debug("Set segment base to {}".format(base))
 
+    del data  # We're done with it!!
+
     # Big ugly patch to deal with APP2 (or other) data coming before APP1
     # In theory, this could be insufficient since 64K is the maximum
     # size --gd
 
     f.seek(0)
-    data = bytearray(f.read(base + 4000))
+    # data = bytearray(f.read(base + 4000))
 
     ## todo: can't we do this better? like, read only what's needed, ...
+    ## We could use a mmap!
 
     # base = 2
     while True:
         logger.debug("Segment base 0x{:X}".format(base))
 
-        b = bytebuffer(data, base)
+        b = mmapbytes(f, base)
+
         _data_b0t2 = b[:2]
 
         if _data_b0t2 == '\xFF\xE0':
@@ -200,7 +204,8 @@ def _get_offset_endian_jpeg(f):
     ## Jump ahead after file headers..
     f.seek(base + 12)
 
-    b = bytebuffer(data, base)
+    b = mmapbytes(f, offset=base)
+
     _data_b2 = b[2]
     _data_b6t10 = b[6:10]
     _data_b6t11 = b[6:11]
