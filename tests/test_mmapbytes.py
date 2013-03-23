@@ -84,14 +84,14 @@ class TestMmapBytes(unittest.TestCase):
             (0, 0),
             (0, 12),
             (None, 12),
-            (14, 0),
+            #(14, 0),  ## Invalid!!
             (14, None),
             (14, 25),
         ]
 
         for winStart, winEnd in test_windows:
             _message = message[winStart:winEnd]
-            mm = mmapbytes(StringIO(_message))
+            mm = mmapbytes(StringIO(message), winStart, winEnd)
             for idx in test_indices:
                 try:
                     expected = ord(_message[idx])
@@ -131,14 +131,14 @@ class TestMmapBytes(unittest.TestCase):
             (0, 0),
             (0, 12),
             (None, 12),
-            (14, 0),
+            #(14, 0),  # Invalid!
             (14, None),
             (14, 25),
         ]
 
         for winStart, winEnd in test_windows:
             _message = message[winStart:winEnd]
-            mm = mmapbytes(StringIO(_message))
+            mm = mmapbytes(StringIO(message), winStart, winEnd)
             for start, end in test_indices:
                 expected = _message[start:end]
                 result = mm[start:end]

@@ -1,0 +1,84 @@
+This was the old content of the ``while True`` loop in
+_get_offset_endian_jpeg(). I preserved it here to keep at hand, since
+it might contain interesting information that could be extracted..
+
+## This is the old way
+# if _data_b0t2 == '\xFF\xE0':
+#     ## APP0
+#     if DEBUGGING:
+#         logger.debug("APP0 at 0x{:X}".format(base))
+#         logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+#         logger.debug("Code: {}".format(b[4:8]))
+#
+# elif _data_b0t2 == '\xFF\xE1':
+#     ## APP1
+#     if DEBUGGING:
+#         logger.debug("APP1 at 0x{:X}".format(base))
+#         logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+#         logger.debug("Code: {}".format(b[4:8]))
+#     if b[4:8] == "Exif":
+#         logger.debug("Decrement base by 2 to get to pre-segment "
+#                      "header (for compatibility with later code)")
+#         base -= 2
+#         break
+#
+# elif _data_b0t2 == '\xFF\xE2':
+#     ## APP2
+#     if DEBUGGING:
+#         logger.debug("APP2 at 0x{:X}".format(base))
+#         logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+#         logger.debug("Code: {}".format(b[4:8]))
+#
+# elif _data_b0t2 == '\xFF\xEE':
+#     # APP14
+#     if DEBUGGING:
+#         logger.debug("APP14 (Adobe segment) at 0x{:X}".format(base))
+#         logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+#         logger.debug("Code: {}".format(b[4:8]))
+#         logger.debug("There is useful EXIF-like data here, but we "
+#                      "have no parser for it.")
+#
+# elif _data_b0t2 == '\xFF\xD8':
+#     ## APP12
+#     if DEBUGGING:
+#         logger.debug("FFD8 segment at 0x{:X}".format(base))
+#         logger.debug("Got {:x} {:x} and {} instead"
+#                      "".format(b[0], b[1], b[4:10]))
+#         logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+#         logger.debug("Code: {}".format(b[4:8]))
+#
+# elif _data_b0t2 == '\xFF\xEC':
+#     ## APP12
+#     if DEBUGGING:
+#         logger.debug("APP12 XMP (Ducky) or Pictureinfo segment "
+#                      "at 0x{:X}".format(base))
+#         logger.debug("Got {:x} {:x} and {} instead"
+#                      "".format(b[0], b[1], b[4:10]))
+#         logger.debug("Length {:x} {:x}".format(b[2], b[3]))
+#         logger.debug("Code: {}".format(b[4:8]))
+#         logger.debug(
+#             "There is useful EXIF-like data here (quality, "
+#             "comment, copyright), but we have no parser for it.")
+#
+# elif _data_b0t2 == '\xFF\xDB':
+#     if DEBUGGING:
+#         logger.debug("JPEG image data at 0x{:X}."
+#                      "No more segments are expected.".format(base))
+#     break
+#
+# else:
+#     if DEBUGGING:
+#         logger.debug("Unexpected/unhandled segment type "
+#                      "or file content.")
+#
+#         ## Note: this thing was wrapped in a ``try .. except``
+#         ## I unwrapped to try and see which exception is raised
+#         ## (if any) and why..
+#
+#         logger.debug("Got {:x} {:x} and {} instead"
+#                      "".format(b[0], b[1], b[4:10]))
+#
+## Increment the base..
+# _base_increment = (b[2] * 256) + b[3] + 2
+# logger.debug("Increment base by {}".format(_base_increment))
+# base += _base_increment

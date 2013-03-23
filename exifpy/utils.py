@@ -43,7 +43,9 @@ def make_string_uc(seq):
 def _get_pack_format(size=4, signed=False, little_endian=False):
     fmt = ''
     fmt += '<' if little_endian else '>'
-    if size == 1:
+    if size == 0:
+        return 'B'
+    elif size == 1:
         fmt += 'B' if not signed else 'b'
     elif size == 2:
         fmt += 'H' if not signed else 'h'
@@ -52,12 +54,14 @@ def _get_pack_format(size=4, signed=False, little_endian=False):
     elif size == 8:
         fmt += 'Q' if not signed else 'q'
     else:
-        raise ValueError("Unsupported non-standard size!")
+        raise ValueError("Unsupported non-standard size (got: {})".format(size))
     return fmt
 
 
 def decode_int(input_string, signed=False, little_endian=True):
     size = len(input_string)
+    if size == 0:
+        return 0
     fmt = _get_pack_format(size=size, signed=signed,
                            little_endian=little_endian)
     return struct.unpack(fmt, input_string)[0]
