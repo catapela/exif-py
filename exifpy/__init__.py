@@ -35,7 +35,6 @@ def _get_offset_endian_tiff(f):
 
 def _get_offset_endian_jpeg(f):
     ## it's a JPEG file
-
     logger.debug("JPEG format recognized data[0:2] == '0xFFD8'.")
 
     ## Determine the "base" from which to start reading
@@ -43,23 +42,21 @@ def _get_offset_endian_jpeg(f):
     data = bytearray(f.read(12))
     base = 2
     while data[2] == 0xFF and data[6:10] in ('JFIF', 'JFXX', 'OLYM', 'Phot'):
-        logger.debug("data[2] == 0xFF data[3] == {:x} and data[6:10] = {}"
+        logger.debug("  data[2] == 0xFF data[3] == {:x} and data[6:10] = {}"
                      "".format(data[3], data[6:10]))
         length = (data[4] * 256) + data[5]
         assert isinstance(length, int)
-        logger.debug("Length offset is {:d}".format(length))
+        logger.debug("    Length offset is {:d}".format(length))
         f.read(length - 8)
         ## Fake an EXIF beginning of file
         ## I don't think this is used. --gd
         data = '\xFF\x00' + f.read(10)
         #fake_exif = 1
         if base > 2:
-            logger.debug("added to base")
             base += length + 2
         else:
-            logger.debug("added to zero")
             base = length + 4
-        logger.debug("Set segment base to {}".format(base))
+        logger.debug("    Set segment base to {}".format(base))
 
     del data  # We're done with it!!
 
