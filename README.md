@@ -1,10 +1,11 @@
-# EXIF.py
+# Description
 
-**Version:** 1.2.1
+**Version:** 1.2.2
 
-Python library to extract EXIF data from tiff and jpeg files.
+library for Python 2.7 (python3 not supported yet) to extract EXIF data from tiff and jpeg files.
 
-Originally written by Gene Cash / Thierry Bousch.
+Exif.py was originally written by Gene Cash / Thierry Bousch.
+
 
 ## Installation
 
@@ -14,28 +15,28 @@ From the source code directory, run:
 
 Or, to install directly from git:
 
-    $ pip install git+git://github.com/rshk/exif-py.git
+    $ pip install git+git://github.com/catapela/exif-py.git
 
 
 ## Command line Usage
 
-    $ exifpy image.jpg
+    $ py3exif image.jpg
 
 Show command line options:
 
-    $ exifpy --help
+    $ py3exif --help
 
 
 ## Python Script Usage
 
 ```python
-import exifpy
+import py3exif
 
 # Open image file for reading (binary mode)
 f = open(path_name, 'rb')
 
 # Return Exif tags
-tags = exifpy.process_file(f)
+tags = py3exif.process_file(f)
 ```
 
 Returned tags will be a dictionary mapping names of Exif tags to their
@@ -45,9 +46,9 @@ You can process the tags as you wish. In particular, you can iterate through
 all the tags with:
 
 ```python
-for tag in tags.keys():
+for tag in tags:
     if tag not in ('JPEGThumbnail', 'TIFFThumbnail', 'Filename', 'EXIF MakerNote'):
-        print "Key: %s, value %s" % (tag, tags[tag])
+        print("Key: %s, value %s" % (tag, tags[tag]))
 ```
 
 An if statement is used to avoid printing out a few of the tags that tend
@@ -72,24 +73,8 @@ These options can be used both in command line mode and within a script.
 Pass the `-q` or `--quick` command line arguments, or as
 
 ```python
-tags = EXIF.process_file(f, details=False)
+tags = EXIF.process_file(f, detailed=False)
 ```
-
-
-#### Stop at Given Tag
-
-To stop processing the file after a specified tag is retrieved.
-
-Pass the `-t TAG` or `--stop-tag TAG` argument, or as
-
-```python
-tags = EXIF.process_file(f, stop_tag='TAG')
-```
-
-where `TAG` is a valid tag name, ex `'DateTimeOriginal'`.
-
-*The two above options are useful to speed up processing of large numbers of files.*
-
 
 #### Strict Processing
 

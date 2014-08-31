@@ -1,20 +1,24 @@
-## exifpy.__main__
+# # py3exif.__main__
 
 import sys
 import optparse
 import logging
+from py3exif import version
 
 from . import process_file, FIELD_TYPES
 import traceback
-from exifpy.exceptions import ExifPyGoodException
+from py3exif.exceptions import py3exifGoodException
 
 
 def main():
-    ## A proper OptionParser...
+    # # A proper OptionParser...
     option_parser = optparse.OptionParser(
         usage='%prog [options] file1.jpg [file2.jpg ...]',
         description='Extract EXIF information from digital camera image files.'
     )
+    option_parser.add_option(
+        '-v', '--version', action='store_true', dest='version', default=False,
+        help='Print current version and exit.')
     option_parser.add_option(
         '-q', '--quick', action='store_true', dest='quick', default=False,
         help='Do not process MakerNotes')
@@ -40,8 +44,8 @@ def main():
              'auto (the default), never, always.')
     opts, args = option_parser.parse_args()
 
-    ## Configure the logger
-    logger = logging.getLogger('exifpy')
+    # # Configure the logger
+    logger = logging.getLogger('py3exif')
     logger.addHandler(logging.StreamHandler(sys.stderr))
     if opts.debug:
         opts.exc_report = True
@@ -49,7 +53,11 @@ def main():
     else:
         logger.setLevel(logging.INFO)
 
-    ## Prepare configuration from options
+    # # Prepare configuration from options
+    if opts.version:
+        print(version.__version__)
+        sys.exit()
+
     detailed = not opts.quick
     strict = opts.strict
 
@@ -61,7 +69,7 @@ def main():
         use_colors_stdout = opts.color == 'always'
         use_colors_stderr = opts.color == 'always'
 
-    ## Output info for each file
+    # # Output info for each file
     if opts.format == 'human':
 
         if use_colors_stdout:
@@ -106,7 +114,7 @@ def main():
 
                     print(message_format.format(key, field_type, printable))
 
-            except Exception, e:
+            except Exception as e:
                 if opts.exc_report:
                     failures.append((filename, e))
                 traceback.print_exc()
@@ -126,17 +134,17 @@ def main():
                 _fmtGood = "        {} {!r}\n"
 
             for filename, exc in failures:
-                if isinstance(exc, ExifPyGoodException):
+                if isinstance(exc, py3exifGoodException):
                     sys.stderr.write(_fmtGood.format(filename, exc))
                 else:
                     sys.stderr.write(_fmtBad.format(filename, exc))
 
     elif opts.format == 'json':
-        ## We have some issues with this.. need work on the library
+        # # We have some issues with this.. need work on the library
         raise NotImplementedError('JSON output not implemented yet')
 
     elif opts.format == 'csv':
-        ## We have some issues with this.. need work on the library
+        # # We have some issues with this.. need work on the library
         raise NotImplementedError('CSV output not implemented yet')
 
 

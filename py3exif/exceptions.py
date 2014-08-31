@@ -1,9 +1,9 @@
 """
-ExifPy Exceptions
+py3exif Exceptions
 """
 
 
-class ExifPyGoodException(Exception):
+class py3exifGoodException(Exception):
     """
     Exception due to missing data to extract, these doesn't
     (usually) mean there was a problem with the library.
@@ -11,21 +11,21 @@ class ExifPyGoodException(Exception):
     pass
 
 
-class UnsupportedFormat(ExifPyGoodException):
+class UnsupportedFormat(py3exifGoodException):
     """
     Unsupported file format: not a jpeg/tiff
     """
     pass
 
 
-class NoExifData(ExifPyGoodException):
+class NoExifData(py3exifGoodException):
     """
     No EXIF data found in the image
     """
     pass
 
 
-class ExifPyBadException(Exception):
+class py3exifBadException(Exception):
     """
     Exception due to a problem with parsing -- this might
     indicate there is a problem with the parser somewhere..

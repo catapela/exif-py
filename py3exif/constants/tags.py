@@ -2,7 +2,7 @@
 Definition of tags
 """
 
-from exifpy.utils import make_string, make_string_uc
+from py3exif.utils import make_string, make_string_uc
 
 __all__ = ['EXIF_TAGS', 'IGNORE_TAGS', 'MAKERNOTE_NIKON_OLDER_TAGS',
            'MAKERNOTE_NIKON_NEWER_TAGS', 'MAKERNOTE_OLYMPUS_TAGS',
@@ -386,7 +386,7 @@ def nikon_ev_bias(seq):
     if a == 0:
         ret_str += "EV"
     else:
-        from exifpy.objects import Ratio
+        from py3exif.objects import Ratio
         r = Ratio(a, b)
         ret_str = ret_str + r.__repr__() + " EV"
     return ret_str

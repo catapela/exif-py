@@ -26,7 +26,7 @@ def _dummy(x):
 
 
 def _ratio(x):
-    from exifpy.objects import Ratio
+    from py3exif.objects import Ratio
     return Ratio(x)
 
 
@@ -36,11 +36,11 @@ FIELD_TYPES = {
     FT_BYTE: (1, 'B', 'Byte', _dummy),
     FT_ASCII: (1, 'A', 'ASCII', _dummy),
     FT_SHORT: (2, 'S', 'Short', int),
-    FT_LONG: (4, 'L', 'Long', long),
+    FT_LONG: (4, 'L', 'Long', int),
     FT_RATIO: (8, 'R', 'Ratio', _ratio),
     FT_SIGNED_BYTE: (1, 'SB', 'Signed Byte', _dummy),
     FT_UNDEFINED: (1, 'U', 'Undefined', _dummy),
     FT_SIGNED_SHORT: (2, 'SS', 'Signed Short', int),
-    FT_SIGNED_LONG: (4, 'SL', 'Signed Long', long),
+    FT_SIGNED_LONG: (4, 'SL', 'Signed Long', int),
     FT_SIGNED_RATIO: (8, 'SR', 'Signed Ratio', _ratio),
 }

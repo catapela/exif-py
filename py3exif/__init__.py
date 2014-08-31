@@ -1,31 +1,38 @@
 """
-ExifPy Main Module
+py3exif Main Module
 """
 
-## Library to extract Exif information from digital camera image files.
-## https://github.com/ianare/exif-py
-## https://github.com/rshk/exif-py
+# # Library to extract Exif information from digital camera image files.
+# # https://github.com/ianare/exif-py
+# # https://github.com/rshk/exif-py
+# # https://github.com/catapela/py3exif
 
-## VERSION 1.2.1
+# # VERSION 1.2.1
 
-## See the 'LICENSE' file for licensing information
-## See the 'changes.txt' file for all contributors and changes
+# # See the 'LICENSE' file for licensing information
+# # See the 'changes.txt' file for all contributors and changes
 
 
 import logging
-from exifpy.constants.tags import EXIF_TAGS, GPS_TAGS, INTR_TAGS, ENDIAN_FORMATS
-from exifpy.constants.field_types import FIELD_TYPES
-from exifpy.exceptions import UnsupportedFormat, NoExifData
-from exifpy.utils import make_string, mmapbytes
-from exifpy.objects import ExifHeader
+from py3exif.constants.tags import EXIF_TAGS, GPS_TAGS
+from py3exif.constants.tags import INTR_TAGS, ENDIAN_FORMATS
+from py3exif.constants.field_types import FIELD_TYPES
+from py3exif.exceptions import UnsupportedFormat, NoExifData
+from py3exif.utils import make_string, mmapbytes
+from py3exif.objects import ExifHeader
+import sys
 
-logger = logging.getLogger('exifpy')
+print('sys version: %s' % sys.version)
+if int(sys.version[0]) < 2:
+    raise SystemExit('please use python3')
+
+logger = logging.getLogger('py3exif')
 
 __all__ = ['process_file']
 
 
 def _get_offset_endian_tiff(f):
-    ## it's a TIFF file
+    # # it's a TIFF file
     f.seek(0)
     endian = f.read(1)
     f.read(1)
@@ -34,10 +41,10 @@ def _get_offset_endian_tiff(f):
 
 
 def _get_offset_endian_jpeg(f):
-    ## it's a JPEG file
+    # # it's a JPEG file
     logger.debug("JPEG format recognized data[0:2] == '0xFFD8'.")
 
-    ## Determine the "base" from which to start reading
+    # # Determine the "base" from which to start reading
     f.seek(0)
     data = bytearray(f.read(12))
     base = 2
@@ -48,10 +55,10 @@ def _get_offset_endian_jpeg(f):
         assert isinstance(length, int)
         logger.debug("    Length offset is {:d}".format(length))
         f.read(length - 8)
-        ## Fake an EXIF beginning of file
-        ## I don't think this is used. --gd
+        # # Fake an EXIF beginning of file
+        # # I don't think this is used. --gd
         data = '\xFF\x00' + f.read(10)
-        #fake_exif = 1
+        # fake_exif = 1
         if base > 2:
             base += length + 2
         else:
@@ -76,7 +83,7 @@ def _get_offset_endian_jpeg(f):
         logger.debug("Increment base by {}".format(_base_increment))
         base += _base_increment
 
-    ## Jump ahead after file headers
+    # # Jump ahead after file headers
     b.set_window(base)
     _data_b2 = b[2]
     _data_b6t10 = b[6:10]
@@ -87,14 +94,14 @@ def _get_offset_endian_jpeg(f):
         logger.debug("Exif header: {:x} {!r}".format(_data_b2, _data_b6t11))
 
         if _data_b6t10 == 'Exif':
-            ## detected EXIF header
+            # # detected EXIF header
             offset = f.tell()
             endian = f.read(1)
             return offset, endian
-            #HACK TEST:  endian = 'M'
+            # HACK TEST:  endian = 'M'
 
         elif _data_b6t11 == 'Ducky':
-            ## detected Ducky header.
+            # # detected Ducky header.
             logger.debug("EXIF-like header (normally 0xFF and code): "
                          "{:x} and {!r}".format(_data_b2, _data_b6t11))
             offset = f.tell()
@@ -102,14 +109,14 @@ def _get_offset_endian_jpeg(f):
             return offset, endian
 
         elif _data_b6t11 == 'Adobe':
-            ## detected APP14 (Adobe)
+            # # detected APP14 (Adobe)
             logger.debug("EXIF-like header (normally 0xFF and code): "
                          "{:x} and {!r}".format(_data_b2, _data_b6t11))
             offset = f.tell()
             endian = f.read(1)
             return offset, endian
     else:
-        ## No EXIF information found -- error!!
+        # # No EXIF information found -- error!!
         logger.debug(
             "No EXIF header found:\n"
             "    Expected b[2]==0xFF and b[6:10]=='Exif'' (or 'Duck')\n"
@@ -123,14 +130,17 @@ def _get_offset_endian(f):
     f.seek(0)
     data = bytearray(f.read(12))
 
-    if data[0:4] in ('II*\x00', 'MM\x00*'):
-        ## This is a TIFF file
+    if data[0:4] in (b'II*\x00', 'MM\x00*'):
+        # # This is a TIFF file
         return _get_offset_endian_tiff(f)
 
-    elif data[0:2] == '\xFF\xD8':
-        ## This is a JPEG file
+    elif data[0:2] == b'\xff\xd8':
+        # # This is a JPEG file
         return _get_offset_endian_jpeg(f)
 
+    logging.error('Data is: %s' % data)
+    logging.error("Should be: %s in  ('II*\x00', 'MM\x00*') or %s in '\xff\xd8'"\
+                  % (data[0:4], data[0:2]))
     raise UnsupportedFormat("Unrecognised file format")
 
 
